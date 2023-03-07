@@ -49,7 +49,7 @@ ADD wayland /wayland_build/
 RUN ["linux32", "bash", "/wayland_build/build-wayland.sh"]
 
 ADD libdecor /libdecor_build/
-RUN ["linux32", "/libdecor_build/build-libdecor.sh"]
+RUN ["linux32", "bash", "/libdecor_build/build-libdecor.sh"]
 
 ADD xorg/macros /xorg_build/macros/
 RUN ["linux32", "bash", "/xorg_build/macros/build-macros.sh"]
@@ -126,10 +126,10 @@ ADD libmodplug /libmodplug_build/
 RUN ["linux32", "bash", "/libmodplug_build/build-libmodplug.sh"]
 
 ADD gettext /gettext_build/
-RUN ["bash", "/gettext_build/build-gettext.sh"]
+RUN ["linux32", "bash", "/gettext_build/build-gettext.sh"]
 
 ADD glib /glib_build/
-RUN ["bash", "/glib_build/build-glib.sh"]
+RUN ["linux32", "bash", "/glib_build/build-glib.sh"]
 
 ADD fluidsynth /fluidsynth_build/
 RUN ["linux32", "bash", "/fluidsynth_build/build-fluidsynth.sh"]
