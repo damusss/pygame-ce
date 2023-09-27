@@ -36,6 +36,32 @@ RUN ["linux32", "bash", "/cmake_build/build-cmake.sh"]
 #ADD zlib-ng /zlib-ng_build/
 #RUN ["linux32", "bash", "/zlib-ng_build/build-zlib-ng.sh"]
 
+RUN ["linux32", "rm", "-f", "/lib/libasound*"]
+ADD alsa /alsa_build/
+RUN ["linux32", "bash", "/alsa_build/build-alsa.sh"]
+
+# TODO: add libsamplerate here
+
+ADD ogg /ogg_build/
+RUN ["linux32", "bash", "/ogg_build/build-ogg.sh"]
+
+ADD flac /flac_build/
+RUN ["linux32", "bash", "/flac_build/build-flac.sh"]
+
+ADD opus /opus_build/
+RUN ["linux32", "bash", "/opus_build/build-opus.sh"]
+
+ADD sndfile /sndfile_build/
+RUN ["linux32", "bash", "/sndfile_build/build-sndfile.sh"]
+
+ADD pulseaudio /pulseaudio_build/
+RUN ["linux32", "bash", "/pulseaudio_build/build-pulseaudio.sh"]
+
+# TODO: add pipewire here
+
+ADD sdl_libs /sdl_build/
+RUN ["linux32", "bash", "/sdl_build/build-sdl2.sh"]
+
 ADD libjpegturbo /libjpegturbo_build/
 RUN ["linux32", "bash", "/libjpegturbo_build/build-jpeg-turbo.sh"]
 
@@ -57,28 +83,8 @@ RUN ["linux32", "bash", "/brotli_build/build-brotli.sh"]
 ADD freetype /freetype_build/
 RUN ["linux32", "bash", "/freetype_build/build-freetype.sh"]
 
-# Replace yum-installed libasound with the one we just compiled.
-RUN ["linux32", "rm", "-f", "/usr/lib/libasound*"]
-ADD alsa /alsa_build/
-RUN ["linux32", "bash", "/alsa_build/build-alsa.sh"]
-
-ADD ogg /ogg_build/
-RUN ["linux32", "bash", "/ogg_build/build-ogg.sh"]
-
 ADD mpg123 /mpg123_build/
 RUN ["linux32", "bash", "/mpg123_build/build-mpg123.sh"]
-
-ADD flac /flac_build/
-RUN ["linux32", "bash", "/flac_build/build-flac.sh"]
-
-ADD opus /opus_build/
-RUN ["linux32", "bash", "/opus_build/build-opus.sh"]
-
-ADD sndfile /sndfile_build/
-RUN ["linux32", "bash", "/sndfile_build/build-sndfile.sh"]
-
-ADD pulseaudio /pulseaudio_build/
-RUN ["linux32", "bash", "/pulseaudio_build/build-pulseaudio.sh"]
 
 ADD libmodplug /libmodplug_build/
 RUN ["linux32", "bash", "/libmodplug_build/build-libmodplug.sh"]
@@ -95,10 +101,8 @@ RUN ["bash", "/glib_build/build-glib.sh"]
 ADD fluidsynth /fluidsynth_build/
 RUN ["linux32", "bash", "/fluidsynth_build/build-fluidsynth.sh"]
 
-# Build and install SDL
-ADD sdl_libs /sdl_build/
+# build SDL_image, SDL_ttf and SDL_mixer
 RUN ["linux32", "bash", "/sdl_build/build-sdl2-libs.sh"]
-
 
 ENV MAKEFLAGS=
 

@@ -3,47 +3,14 @@ set -e -x
 
 cd $(dirname `readlink -f "$0"`)
 
-SDL2="SDL2-2.26.5"
 IMG2="SDL2_image-2.0.5"
 TTF2="SDL2_ttf-2.20.2"
 MIX2="SDL2_mixer-2.6.3"
-
-
-# Download
-curl -sL --retry 10 https://www.libsdl.org/release/${SDL2}.tar.gz > ${SDL2}.tar.gz
-# curl -sL --retry 10 https://www.libsdl.org/tmp/release/SDL2-2.0.14.tar.gz > SDL2-2.0.14.tar.gz
-# curl -sL --retry 10 https://hg.libsdl.org/SDL/archive/tip.tar.gz > ${SDL2}.tar.gz
 
 curl -sL --retry 10 https://www.libsdl.org/projects/SDL_image/release/${IMG2}.tar.gz > ${IMG2}.tar.gz
 curl -sL --retry 10 https://www.libsdl.org/projects/SDL_ttf/release/${TTF2}.tar.gz > ${TTF2}.tar.gz
 curl -sL --retry 10 https://www.libsdl.org/projects/SDL_mixer/release/${MIX2}.tar.gz > ${MIX2}.tar.gz
 sha512sum -c sdl2.sha512
-
-
-
-# Build SDL
-tar xzf ${SDL2}.tar.gz
-
-# this is for renaming the tip.tar.gz
-# mv SDL-* ${SDL2}
-
-if [[ "$MAC_ARCH" == "arm64" ]]; then
-    # Build SDL with ARM optimisations on M1 macs
-    export M1_MAC_EXTRA_FLAGS="--enable-arm-simd --enable-arm-neon"
-fi
-
-cd $SDL2
-./configure --disable-video-vulkan $ARCHS_CONFIG_FLAG $M1_MAC_EXTRA_FLAGS
-make
-make install
-
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    # Install to mac deps cache dir as well
-    make install DESTDIR=${MACDEP_CACHE_PREFIX_PATH}
-fi
-
-cd ..
-
 
 # Build SDL_image
 tar xzf ${IMG2}.tar.gz

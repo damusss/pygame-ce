@@ -12,7 +12,12 @@ bzip2 -d ${MPG123}.tar.bz2
 tar xf ${MPG123}.tar
 cd $MPG123
 
-./configure $ARCHS_CONFIG_FLAG --enable-int-quality --disable-debug
+if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    # use sdl2, and only sdl2 backend
+    export MPG123_EXTRA_ARGS="--with-audio=sdl --with-default-audio=sdl"
+fi
+
+./configure $ARCHS_CONFIG_FLAG --enable-int-quality --disable-debug $MPG123_EXTRA_ARGS
 make
 make install
 

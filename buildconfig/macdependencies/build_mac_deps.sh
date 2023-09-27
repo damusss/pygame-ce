@@ -80,12 +80,16 @@ bash flac/build-flac.sh
 bash mpg123/build-mpg123.sh
 bash opus/build-opus.sh # needs libogg (which is a container format)
 
+# installs sdl2 by itself (fluidsynth can use it)
+bash sdl_libs/build-sdl2.sh
+
 # fluidsynth (for sdl_mixer)
 bash gettext/build-gettext.sh
 bash glib/build-glib.sh # depends on gettext
 bash sndfile/build-sndfile.sh
 bash fluidsynth/build-fluidsynth.sh
 
+# build sdl_image, sdl_ttf and sdl_mixer
 bash sdl_libs/build-sdl2-libs.sh
 
 # for pygame.midi

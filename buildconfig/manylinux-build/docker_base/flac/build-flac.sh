@@ -13,7 +13,18 @@ unxz ${FLAC}.tar.xz
 tar xf ${FLAC}.tar
 cd $FLAC
 
-./configure $ARCHS_CONFIG_FLAG
+mkdir build
+cd build
+
+# use cmake to try to catch the ogg dependency
+cmake .. $PG_BASE_CMAKE_FLAGS \
+    -DBUILD_CXXLIBS=0 \
+    -DBUILD_PROGRAMS=0 \
+    -DBUILD_EXAMPLES=0 \
+    -DBUILD_TESTING=0 \
+    -DBUILD_DOCS=0 \
+    -DINSTALL_MANPAGES=0
+
 make
 make install
 
