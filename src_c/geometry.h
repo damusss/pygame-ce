@@ -21,6 +21,27 @@ typedef struct {
 #define pgCircle_Check(o) ((o)->ob_type == &pgCircle_Type)
 
 static PyTypeObject pgCircle_Type;
+
+typedef struct {
+    double xa, ya;
+    double xb, yb;
+} pgLineBase;
+
+typedef struct {
+    PyObject_HEAD pgLineBase line;
+    PyObject *weakreflist;
+} pgLineObject;
+
+#define pgLine_CAST(o) ((pgLineObject *)(o))
+#define pgLine_AsLine(o) (pgCircle_CAST(o)->circle)
+#define pgLine_GETX1(self) (pgLine_CAST(self)->line.xa)
+#define pgLine_GETY1(self) (pgLine_CAST(self)->line.ya)
+#define pgLine_GETX2(self) (pgLine_CAST(self)->line.xb)
+#define pgLine_GETY2(self) (pgLine_CAST(self)->line.yb)
+#define pgLine_Check(o) ((o)->ob_type == &pgLine_Type)
+
+static PyTypeObject pgLine_Type;
+
 /* Constants */
 
 /* PI */
@@ -38,11 +59,23 @@ static PyTypeObject pgCircle_Type;
 #define M_PI_QUO_180 0.01745329251994329577
 #endif
 
+/* 180/PI */
+#ifndef M_180_QUO_PI
+#define M_180_QUO_PI 57.29577951308232087680
+#endif
+
 /* Converts degrees to radians */
 static inline double
 DEG_TO_RAD(double deg)
 {
     return deg * M_PI_QUO_180;
+}
+
+/* Converts radians to degrees */
+static inline double
+RAD_TO_DEG(double rad)
+{
+    return rad * M_180_QUO_PI;
 }
 
 #endif  // PYGAME_CE_GEOMETRY_H
