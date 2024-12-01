@@ -43,25 +43,13 @@ from pygame.pixelcopy import (
     map_array as pix_map_array,
     make_surface as pix_make_surface,
 )
-import numpy
-from numpy import (
-    array as numpy_array,
-    empty as numpy_empty,
-    uint32 as numpy_uint32,
-    ndarray as numpy_ndarray,
-)
 
 import warnings  # will be removed in the future
 
 
-# float96 not available on all numpy versions.
-numpy_floats = [
-    getattr(numpy, type_name)
-    for type_name in "float32 float64 float96".split()
-    if hasattr(numpy, type_name)
-]
-# Added below due to deprecation of numpy.float. See pygame-ce issue #1440
-numpy_floats.append(float)
+numpy = None
+numpy_floats = []
+
 
 # Pixel sizes corresponding to NumPy supported integer sizes, and therefore
 # permissible for 2D reference arrays.
@@ -93,6 +81,20 @@ __all__ = [
 ]
 
 
+def _lazy_import():
+    global numpy, numpy_floats
+    import numpy
+
+    # float96 not available on all numpy versions.
+    numpy_floats = [
+        getattr(numpy, type_name)
+        for type_name in "float32 float64 float96".split()
+        if hasattr(numpy, type_name)
+    ]
+    # Added below due to deprecation of numpy.float. See pygame-ce issue #1440
+    numpy_floats.append(float)
+
+
 def blit_array(surface, array):
     """pygame.surfarray.blit_array(Surface, array): return None
 
@@ -106,8 +108,10 @@ def blit_array(surface, array):
     This function will temporarily lock the Surface as the new values are
     copied.
     """
-    if isinstance(array, numpy_ndarray) and array.dtype in numpy_floats:
-        array = array.round(0).astype(numpy_uint32)
+    if numpy is None:
+        _lazy_import()
+    if isinstance(array, numpy.ndarray) and array.dtype in numpy_floats:
+        array = array.round(0).astype(numpy.uint32)
     return array_to_surface(surface, array)
 
 
@@ -119,8 +123,10 @@ def make_surface(array):
     Create a new Surface that best resembles the data and format on the
     array. The array can be 2D or 3D with any sized integer values.
     """
-    if isinstance(array, numpy_ndarray) and array.dtype in numpy_floats:
-        array = array.round(0).astype(numpy_uint32)
+    if numpy is None:
+        _lazy_import()
+    if isinstance(array, numpy.ndarray) and array.dtype in numpy_floats:
+        array = array.round(0).astype(numpy.uint32)
     return pix_make_surface(array)
 
 
@@ -137,6 +143,8 @@ def array2d(surface):
     (see the Surface.lock - lock the Surface memory for pixel access
     method).
     """
+    if numpy is None:
+        _lazy_import()
     bpp = surface.get_bytesize()
     try:
         dtype = (numpy.uint8, numpy.uint16, numpy.int32, numpy.int32)[bpp - 1]
@@ -164,10 +172,12 @@ def pixels2d(surface):
     the array (see the Surface.lock - lock the Surface memory for pixel
     access method).
     """
+    if numpy is None:
+        _lazy_import()
     if surface.get_bitsize() not in _pixel2d_bitdepths:
         raise ValueError("unsupported bit depth for 2D reference array")
     try:
-        return numpy_array(surface.get_view("2"), copy=False)
+        return numpy.array(surface.get_view("2"), copy=False)
     except (ValueError, TypeError):
         raise ValueError(
             f"bit depth {surface.get_bitsize()} unsupported for 2D reference array"
@@ -187,6 +197,8 @@ def array3d(surface):
     (see the Surface.lock - lock the Surface memory for pixel access
     method).
     """
+    if numpy is None:
+        _lazy_import()
     width, height = surface.get_size()
     array = numpy.empty((width, height, 3), numpy.uint8)
     surface_to_array(array, surface)
@@ -209,7 +221,9 @@ def pixels3d(surface):
     the array (see the Surface.lock - lock the Surface memory for pixel
     access method).
     """
-    return numpy_array(surface.get_view("3"), copy=False)
+    if numpy is None:
+        _lazy_import()
+    return numpy.array(surface.get_view("3"), copy=False)
 
 
 def array_alpha(surface):
@@ -226,6 +240,8 @@ def array_alpha(surface):
     (see the Surface.lock - lock the Surface memory for pixel access
     method).
     """
+    if numpy is None:
+        _lazy_import()
     size = surface.get_size()
     array = numpy.empty(size, numpy.uint8)
     surface_to_array(array, surface, "A")
@@ -247,6 +263,8 @@ def pixels_alpha(surface):
     The Surface this array references will remain locked for the
     lifetime of the array.
     """
+    if numpy is None:
+        _lazy_import()
     return numpy.array(surface.get_view("A"), copy=False)
 
 
@@ -264,6 +282,8 @@ def pixels_red(surface):
     The Surface this array references will remain locked for the
     lifetime of the array.
     """
+    if numpy is None:
+        _lazy_import()
     return numpy.array(surface.get_view("R"), copy=False)
 
 
@@ -279,6 +299,8 @@ def array_red(surface):
     (see the Surface.lock - lock the Surface memory for pixel access
     method).
     """
+    if numpy is None:
+        _lazy_import()
     size = surface.get_size()
     array = numpy.empty(size, numpy.uint8)
     surface_to_array(array, surface, "R")
@@ -299,6 +321,8 @@ def pixels_green(surface):
     The Surface this array references will remain locked for the
     lifetime of the array.
     """
+    if numpy is None:
+        _lazy_import()
     return numpy.array(surface.get_view("G"), copy=False)
 
 
@@ -314,6 +338,8 @@ def array_green(surface):
     (see the Surface.lock - lock the Surface memory for pixel access
     method).
     """
+    if numpy is None:
+        _lazy_import()
     size = surface.get_size()
     array = numpy.empty(size, numpy.uint8)
     surface_to_array(array, surface, "G")
@@ -334,6 +360,8 @@ def pixels_blue(surface):
     The Surface this array references will remain locked for the
     lifetime of the array.
     """
+    if numpy is None:
+        _lazy_import()
     return numpy.array(surface.get_view("B"), copy=False)
 
 
@@ -349,6 +377,8 @@ def array_blue(surface):
     (see the Surface.lock - lock the Surface memory for pixel access
     method).
     """
+    if numpy is None:
+        _lazy_import()
     size = surface.get_size()
     array = numpy.empty(size, numpy.uint8)
     surface_to_array(array, surface, "B")
@@ -370,6 +400,8 @@ def array_colorkey(surface):
     This function will temporarily lock the Surface as pixels are
     copied.
     """
+    if numpy is None:
+        _lazy_import()
     size = surface.get_size()
     array = numpy.empty(size, numpy.uint8)
     surface_to_array(array, surface, "C")
@@ -390,12 +422,14 @@ def map_array(surface, array):
     colors). The array shape is limited to eleven dimensions maximum,
     including the three element minor axis.
     """
+    if numpy is None:
+        _lazy_import()
     if array.ndim == 0:
         raise ValueError("array must have at least 1 dimension")
     shape = array.shape
     if shape[-1] != 3:
         raise ValueError("array must be a 3d array of 3-value color data")
-    target = numpy_empty(shape[:-1], numpy.int32)
+    target = numpy.empty(shape[:-1], numpy.int32)
     pix_map_array(target, array, surface)
     return target
 

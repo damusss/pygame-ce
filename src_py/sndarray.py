@@ -38,10 +38,10 @@ if the sound sample type requests this.
 """
 
 from pygame import mixer
-import numpy
 
 import warnings
 
+numpy = None
 
 __all__ = [
     "array",
@@ -53,6 +53,11 @@ __all__ = [
 ]
 
 
+def _lazy_import():
+    global numpy
+    import numpy
+
+
 def array(sound):
     """pygame.sndarray.array(Sound): return array
 
@@ -62,7 +67,8 @@ def array(sound):
     array will always be in the format returned from
     pygame.mixer.get_init().
     """
-
+    if numpy is None:
+        _lazy_import()
     return numpy.array(sound, copy=True)
 
 
@@ -75,7 +81,8 @@ def samples(sound):
     object. Modifying the array will change the Sound. The array will
     always be in the format returned from pygame.mixer.get_init().
     """
-
+    if numpy is None:
+        _lazy_import()
     return numpy.array(sound, copy=False)
 
 
@@ -88,7 +95,6 @@ def make_sound(array):
     must be initialized and the array format must be similar to the mixer
     audio format.
     """
-
     return mixer.Sound(array=array)
 
 

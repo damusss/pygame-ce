@@ -300,15 +300,21 @@ try:
 except (ImportError, OSError):
     scrap = MissingModule("scrap", urgent=0)
 
-try:
-    import pygame.surfarray
-except (ImportError, OSError):
+import importlib.util as importlib_util
+if importlib_util.find_spec("numpy") is None:
     surfarray = MissingModule("surfarray", urgent=0)
-
-try:
-    import pygame.sndarray
-except (ImportError, OSError):
     sndarray = MissingModule("sndarray", urgent=0)
+else:
+    try:
+        import pygame.surfarray
+    except (ImportError, OSError):
+        surfarray = MissingModule("surfarray", urgent=0)
+
+    try:
+        import pygame.sndarray
+    except (ImportError, OSError):
+        sndarray = MissingModule("sndarray", urgent=0)
+del importlib_util
 
 try:
     import pygame._debug
