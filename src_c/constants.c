@@ -647,6 +647,7 @@ MODINIT_DEFINE(constants)
     DEC_CONSTS(FLASH_BRIEFLY, -1);
     DEC_CONSTS(FLASH_UNTIL_FOCUSED, -1);
 #endif
+    DEC_CONSTS(FILEDIALOG, PGE_FILEDIALOG);
 
     if (PyModule_AddObject(module, "__all__", all_list)) {
         Py_DECREF(all_list);

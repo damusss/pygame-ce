@@ -983,9 +983,16 @@ window_init(pgWindowObject *self, PyObject *args, PyObject *kwargs)
     const char *_key_str;
     int _value_bool;
 
+    // TODO: REVERT
     // ensure display is init at this point, display init automatically calls
     // the window init in this module
-    if (!pg_mod_autoinit(IMPPREFIX "display"))
+    // if (!pg_mod_autoinit(IMPPREFIX "display"))
+    //    return -1;
+    SDL_InitSubSystem(SDL_INIT_VIDEO);
+
+    if (!pg_mod_autoinit(IMPPREFIX "time"))
+        return -1;
+    if (!pg_mod_autoinit(IMPPREFIX "event"))
         return -1;
 
     _kw = PyDict_New();
@@ -1214,24 +1221,25 @@ window_init(pgWindowObject *self, PyObject *args, PyObject *kwargs)
     }
 
     pg_set_pg_window(_win, (PyObject *)self);
-
-    PyObject *icon = pg_display_resource(icon_defaultname);
-    if (!icon) {
-        return -1;
-    }
-    if (icon_colorkey != -1) {
-#if SDL_VERSION_ATLEAST(3, 0, 0)
-        if (!SDL_SetColorKey(pgSurface_AsSurface(icon), SDL_TRUE,
-                             icon_colorkey)) {
-#else
-        if (SDL_SetColorKey(pgSurface_AsSurface(icon), SDL_TRUE,
-                            icon_colorkey) < 0) {
-#endif
-            PyErr_SetString(pgExc_SDLError, SDL_GetError());
+    // TODO: REVERT
+    /*
+        PyObject *icon = pg_display_resource(icon_defaultname);
+        if (!icon) {
             return -1;
         }
-    }
-    SDL_SetWindowIcon(self->_win, pgSurface_AsSurface(icon));
+        if (icon_colorkey != -1) {
+    #if SDL_VERSION_ATLEAST(3, 0, 0)
+            if (!SDL_SetColorKey(pgSurface_AsSurface(icon), SDL_TRUE,
+                                 icon_colorkey)) {
+    #else
+            if (SDL_SetColorKey(pgSurface_AsSurface(icon), SDL_TRUE,
+                                icon_colorkey) < 0) {
+    #endif
+                PyErr_SetString(pgExc_SDLError, SDL_GetError());
+                return -1;
+            }
+        }
+        SDL_SetWindowIcon(self->_win, pgSurface_AsSurface(icon));*/
 
     return 0;
 }
@@ -1449,15 +1457,17 @@ MODINIT_DEFINE(window)
         return NULL;
     }
 
-    import_pygame_surface();
+    // TODO: REVERT
+    /*import_pygame_surface();
     if (PyErr_Occurred()) {
         return NULL;
     }
 
+    // TODO: REVERT
     import_pygame_rect();
     if (PyErr_Occurred()) {
         return NULL;
-    }
+    }*/
 
     if (PyType_Ready(&pgWindow_Type) < 0) {
         return NULL;

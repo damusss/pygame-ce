@@ -265,6 +265,7 @@ typedef enum {
     PGE_MIDIOUT,
     PGE_KEYREPEAT, /* Special internal pygame event, for managing key-presses
                     */
+    PGE_FILEDIALOG,
 
     /* DO NOT CHANGE THE ORDER OF EVENTS HERE */
     PGE_WINDOWSHOWN,
@@ -378,6 +379,7 @@ typedef enum {
     PGPOST_WINDOWHITTEST,
     PGPOST_WINDOWICCPROFCHANGED,
     PGPOST_WINDOWDISPLAYCHANGED,
+    PGPOST_FILEDIALOG,
 
     PGE_USEREVENT, /* this event must stay in this position only */
 

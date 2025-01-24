@@ -1,6 +1,8 @@
 from typing import Optional, TypedDict
 
 from pygame._data_classes import PowerState
+from pygame.window import Window
+from pygame.typing import SequenceLike
 
 class _InstructionSets(TypedDict):
     ALTIVEC: bool
@@ -28,3 +30,22 @@ def get_total_ram() -> int: ...
 def get_pref_path(org: str, app: str) -> str: ...
 def get_pref_locales() -> list[_Locale]: ...
 def get_power_state() -> Optional[PowerState]: ...
+def show_file_dialog(
+    allow_many: bool = False,
+    default_location: str|None =None,
+    title: str|None = None,
+    parent_window: Window|None=None,
+    filters:SequenceLike[SequenceLike[str]]|None=None,
+) -> int: ...
+def show_folder_dialog(
+    allow_many: bool = False,
+    default_location: str|None =None,
+    title: str|None = None,
+    parent_window: Window|None=None,
+) -> int: ...
+def show_save_dialog(
+    default_location: str|None =None,
+    title: str|None = None,
+    parent_window: Window|None=None,
+    filters:SequenceLike[SequenceLike[str]]|None=None,
+) -> int: ...

@@ -433,6 +433,7 @@ _pg_pgevent_proxify_helper(Uint32 type, Uint8 proxify)
         _PG_HANDLE_PROXIFY_PGE(WINDOWHITTEST);
         _PG_HANDLE_PROXIFY_PGE(WINDOWICCPROFCHANGED);
         _PG_HANDLE_PROXIFY_PGE(WINDOWDISPLAYCHANGED);
+        _PG_HANDLE_PROXIFY_PGE(FILEDIALOG);
         default:
             return type;
     }

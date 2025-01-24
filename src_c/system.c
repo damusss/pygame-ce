@@ -4,6 +4,8 @@
 
 #include "doc/system_doc.h"
 
+static int file_dialog_uid = 0;
+
 static PyObject *
 pg_system_get_cpu_instruction_sets(PyObject *self, PyObject *_null)
 {
@@ -247,6 +249,333 @@ pg_system_get_power_state(PyObject *self, PyObject *_null)
     return PyObject_Call(PowerState_class, return_args, return_kwargs);
 }
 
+typedef struct {
+    int uid;
+    SDL_DialogFileFilter *filters;
+} pg_FileDialogUserData;
+
+static void SDLCALL
+_file_dialog_callback(void *userdata, const char *const *filelist, int filter)
+{
+    pg_FileDialogUserData *data = (pg_FileDialogUserData *)userdata;
+
+    if (data->filters) {
+        SDL_free(data->filters);
+        data->filters = NULL;
+    }
+
+    PyGILState_STATE gil_state = PyGILState_Ensure();
+
+    PyObject *file_list_obj = PyList_New(0);
+    if (!file_list_obj) {
+        PyErr_NoMemory();
+        SDL_free(data);
+        PyGILState_Release(gil_state);
+        return;
+    }
+
+    for (const char *const *file = filelist; file && *file; file++) {
+        PyObject *file_obj = PyUnicode_FromString(*file);
+        if (!file_obj) {
+            Py_DECREF(file_list_obj);
+            PyErr_NoMemory();
+            SDL_free(data);
+            PyGILState_Release(gil_state);
+            return;
+        }
+        PyList_Append(file_list_obj, file_obj);
+        Py_DECREF(file_obj);
+    }
+
+    PyObject *py_filter = PyLong_FromLong(filter);
+    if (!py_filter) {
+        Py_DECREF(file_list_obj);
+        PyErr_NoMemory();
+        SDL_free(data);
+        PyGILState_Release(gil_state);
+        return;
+    }
+
+    PyObject *event_dict = PyDict_New();
+    if (event_dict) {
+        PyObject *uid_obj = PyLong_FromLong(data->uid);
+        if (!uid_obj) {
+            PyGILState_Release(gil_state);
+            SDL_free(data);
+            Py_DECREF(event_dict);
+            Py_DECREF(file_list_obj);
+            return;
+        }
+        PyObject *filter_obj = PyLong_FromLong(filter);
+        if (!filter_obj) {
+            PyGILState_Release(gil_state);
+            SDL_free(data);
+            Py_DECREF(event_dict);
+            Py_DECREF(file_list_obj);
+            return;
+        }
+        PyDict_SetItemString(event_dict, "uid", uid_obj);
+        PyDict_SetItemString(event_dict, "filter", filter_obj);
+        PyDict_SetItemString(event_dict, "filepaths", file_list_obj);
+        Py_DECREF(uid_obj);
+        Py_DECREF(filter_obj);
+        Py_DECREF(file_list_obj);
+        pg_post_event(PGE_FILEDIALOG, event_dict);
+        Py_DECREF(event_dict);
+    }
+    else {
+        Py_DECREF(file_list_obj);
+    }
+
+    PyGILState_Release(gil_state);
+    SDL_free(data);
+}
+
+static int
+_validate_and_show_file_dialog(SDL_FileDialogType type, int *uid,
+                               int allow_many, PyObject *default_location_obj,
+                               PyObject *title_obj,
+                               PyObject *parent_window_obj,
+                               PyObject *filters_obj)
+{
+    SDL_PropertiesID props = SDL_CreateProperties();
+    SDL_DialogFileFilter *filters = NULL;
+
+#pragma region FILTERS
+
+    if (filters_obj != Py_None) {
+        if (!PySequence_Check(filters_obj)) {
+            PyErr_SetString(PyExc_TypeError, "'filters' must be a sequence");
+            return -1;
+        }
+
+        Py_ssize_t filters_size = PySequence_Size(filters_obj);
+        if (filters_size == -1) {
+            return -1;  // error already set
+        }
+
+        filters = (SDL_DialogFileFilter *)SDL_malloc(
+            filters_size * sizeof(SDL_DialogFileFilter));
+        if (!filters) {
+            PyErr_NoMemory();
+            return -1;
+        }
+
+        for (Py_ssize_t i = 0; i < filters_size; i++) {
+            PyObject *item = PySequence_GetItem(filters_obj, i);
+            if (!item) {
+                SDL_free(filters);
+                return -1;  // error already set
+            }
+
+            if (!PySequence_Check(item) || PySequence_Size(item) != 2) {
+                PyErr_SetString(PyExc_TypeError,
+                                "Each filter item must be a valid sequence of "
+                                "exactly 2 string objects");
+                Py_DECREF(item);
+                SDL_free(filters);
+                return -1;
+            }
+
+            PyObject *str1_obj = PySequence_GetItem(item, 0);
+            PyObject *str2_obj = PySequence_GetItem(item, 1);
+            Py_DECREF(item);
+
+            if (!PyUnicode_Check(str1_obj) || !PyUnicode_Check(str2_obj)) {
+                PyErr_SetString(PyExc_TypeError,
+                                "Each filter item must be a valid sequence of "
+                                "exactly 2 string objects");
+                Py_XDECREF(str1_obj);
+                Py_XDECREF(str2_obj);
+                SDL_free(filters);
+                return -1;
+            }
+
+            const char *str1 = PyUnicode_AsUTF8(str1_obj);
+            const char *str2 = PyUnicode_AsUTF8(str2_obj);
+
+            if (!str1 || !str2) {
+                Py_XDECREF(str1_obj);
+                Py_XDECREF(str2_obj);
+                SDL_free(filters);
+                return -1;  // error already set
+            }
+
+            filters[i].name = str1;
+            filters[i].pattern = str2;
+
+            Py_DECREF(str1_obj);
+            Py_DECREF(str2_obj);
+        }
+        if (SDL_SetPointerProperty(props, SDL_PROP_FILE_DIALOG_FILTERS_POINTER,
+                                   filters) == SDL_FALSE) {
+            PyErr_SetString(pgExc_SDLError, SDL_GetError());
+            SDL_free(filters);
+            return -1;
+        }
+        if (SDL_SetNumberProperty(props, SDL_PROP_FILE_DIALOG_NFILTERS_NUMBER,
+                                  filters_size) == SDL_FALSE) {
+            PyErr_SetString(pgExc_SDLError, SDL_GetError());
+            SDL_free(filters);
+            return -1;
+        }
+    }
+
+#pragma endregion
+
+    if (allow_many == 1) {
+        if (SDL_SetBooleanProperty(props, SDL_PROP_FILE_DIALOG_MANY_BOOLEAN,
+                                   SDL_TRUE) == SDL_FALSE) {
+            PyErr_SetString(pgExc_SDLError, SDL_GetError());
+            return -1;
+        }
+    }
+
+    if (PyUnicode_Check(default_location_obj)) {
+        const char *default_location = PyUnicode_AsUTF8(default_location_obj);
+        if (!default_location) {
+            return -1;  // error already set
+        }
+        if (SDL_SetStringProperty(props, SDL_PROP_FILE_DIALOG_LOCATION_STRING,
+                                  default_location) == SDL_FALSE) {
+            PyErr_SetString(pgExc_SDLError, SDL_GetError());
+            return -1;
+        }
+    }
+    else if (default_location_obj != Py_None) {
+        PyErr_Format(PyExc_TypeError,
+                     "'default_location' must be a string or None, not '%s'",
+                     default_location_obj->ob_type->tp_name);
+        return -1;
+    }
+
+    if (PyUnicode_Check(title_obj)) {
+        const char *title = PyUnicode_AsUTF8(title_obj);
+        if (!title) {
+            return -1;  // error already set
+        }
+        if (SDL_SetStringProperty(props, SDL_PROP_FILE_DIALOG_TITLE_STRING,
+                                  title) == SDL_FALSE) {
+            PyErr_SetString(pgExc_SDLError, SDL_GetError());
+            return -1;
+        }
+    }
+    else if (title_obj != Py_None) {
+        PyErr_Format(PyExc_TypeError,
+                     "'title' must be a string or None, not '%s'",
+                     title_obj->ob_type->tp_name);
+        return -1;
+    }
+
+    if (pgWindow_Check(parent_window_obj)) {
+        SDL_Window *window = ((pgWindowObject *)parent_window_obj)->_win;
+        if (SDL_SetPointerProperty(props, SDL_PROP_FILE_DIALOG_WINDOW_POINTER,
+                                   window) == SDL_FALSE) {
+            PyErr_SetString(pgExc_SDLError, SDL_GetError());
+            return -1;
+        }
+    }
+    else if (parent_window_obj != Py_None) {
+        PyErr_Format(
+            PyExc_TypeError,
+            "'parent_window' must be a pygame.Window or None, not '%s'",
+            title_obj->ob_type->tp_name);
+        return -1;
+    }
+
+    *uid = file_dialog_uid;
+    file_dialog_uid++;
+
+    pg_FileDialogUserData *userdata =
+        (pg_FileDialogUserData *)SDL_malloc(sizeof(pg_FileDialogUserData));
+    if (!userdata) {
+        PyErr_NoMemory();
+        return -1;
+    }
+    userdata->uid = *uid;
+    userdata->filters = filters;
+
+    SDL_ShowFileDialogWithProperties(type, _file_dialog_callback, userdata,
+                                     props);
+
+    return 0;
+}
+
+static PyObject *
+pg_system_show_file_dialog(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+    int uid;
+    PyObject *default_location_obj = Py_None, *title_obj = Py_None;
+    PyObject *parent_window_obj = Py_None, *filters_obj = Py_None;
+    int allow_many = 0;
+
+    static char *keywords[] = {"allow_many",    "default_location", "title",
+                               "parent_window", "filters",          NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|pOOOO", keywords,
+                                     &allow_many, &default_location_obj,
+                                     &title_obj, &parent_window_obj,
+                                     &filters_obj))
+        return NULL;
+
+    if (_validate_and_show_file_dialog(
+            SDL_FILEDIALOG_OPENFILE, &uid, allow_many, default_location_obj,
+            title_obj, parent_window_obj, filters_obj) < 0) {
+        return NULL;
+    }
+
+    return PyLong_FromLong(uid);
+}
+
+static PyObject *
+pg_system_show_folder_dialog(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+    int uid;
+    PyObject *default_location_obj = Py_None, *title_obj = Py_None;
+    PyObject *parent_window_obj = Py_None;
+    int allow_many = 0;
+
+    static char *keywords[] = {"allow_many", "default_location", "title",
+                               "parent_window", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|pOOO", keywords,
+                                     &allow_many, &default_location_obj,
+                                     &title_obj, &parent_window_obj))
+        return NULL;
+
+    if (_validate_and_show_file_dialog(
+            SDL_FILEDIALOG_OPENFOLDER, &uid, allow_many, default_location_obj,
+            title_obj, parent_window_obj, Py_None) < 0) {
+        return NULL;
+    }
+
+    return PyLong_FromLong(uid);
+}
+
+static PyObject *
+pg_system_show_save_dialog(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+    int uid;
+    PyObject *default_location_obj = Py_None, *title_obj = Py_None;
+    PyObject *parent_window_obj = Py_None, *filters_obj = Py_None;
+
+    static char *keywords[] = {"default_location", "title", "parent_window",
+                               "filters", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OOOO", keywords,
+                                     &default_location_obj, &title_obj,
+                                     &parent_window_obj, &filters_obj))
+        return NULL;
+
+    if (_validate_and_show_file_dialog(SDL_FILEDIALOG_SAVEFILE, &uid, 0,
+                                       default_location_obj, title_obj,
+                                       parent_window_obj, filters_obj) < 0) {
+        return NULL;
+    }
+
+    return PyLong_FromLong(uid);
+}
+
 static PyMethodDef _system_methods[] = {
     {"get_cpu_instruction_sets", pg_system_get_cpu_instruction_sets,
      METH_NOARGS, DOC_SYSTEM_GETCPUINSTRUCTIONSETS},
@@ -258,6 +587,12 @@ static PyMethodDef _system_methods[] = {
      DOC_SYSTEM_GETPREFLOCALES},
     {"get_power_state", pg_system_get_power_state, METH_NOARGS,
      DOC_SYSTEM_GETPOWERSTATE},
+    {"show_file_dialog", (PyCFunction)pg_system_show_file_dialog,
+     METH_VARARGS | METH_KEYWORDS, "test"},
+    {"show_folder_dialog", (PyCFunction)pg_system_show_folder_dialog,
+     METH_VARARGS | METH_KEYWORDS, "test"},
+    {"show_save_dialog", (PyCFunction)pg_system_show_save_dialog,
+     METH_VARARGS | METH_KEYWORDS, "test"},
     {NULL, NULL, 0, NULL}};
 
 MODINIT_DEFINE(system)
@@ -275,6 +610,16 @@ MODINIT_DEFINE(system)
        the module is there is an error the module is not loaded.
     */
     import_pygame_base();
+    if (PyErr_Occurred()) {
+        return NULL;
+    }
+
+    import_pygame_window();
+    if (PyErr_Occurred()) {
+        return NULL;
+    }
+
+    import_pygame_event();
     if (PyErr_Occurred()) {
         return NULL;
     }
