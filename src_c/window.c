@@ -907,6 +907,74 @@ window_get_utility(pgWindowObject *self, void *v)
                            SDL_WINDOW_UTILITY);
 }
 
+static int
+window_set_surface_vsync(pgWindowObject *self, PyObject *arg, void *v)
+{
+#if SDL_VERSION_ATLEAST(3, 2, 0)
+    int vsync = SDL_WINDOW_SURFACE_VSYNC_DISABLED;
+
+    if (PyBool_Check(arg)) {
+        if (arg == Py_True) {
+            vsync = 1;
+        }
+    }
+    else if (PyLong_Check(arg)) {
+        long value = PyLong_AsLong(arg);
+        if (PyErr_Occurred()) {
+            return -1;
+        }
+        if (value < -1) {
+            PyErr_SetString(
+                PyExc_ValueError,
+                "Invalid window surface vsync integer (must be >= -1)");
+            return -1;
+        }
+        vsync = (int)value;
+    }
+    else if (arg != Py_None) {
+        PyErr_Format(PyExc_TypeError,
+                     "Window surface VSync must be None, False or 0 to be "
+                     "disabled, -1 for adaptive and True or a positive "
+                     "integer to be enabled, not '%s'",
+                     Py_TYPE(arg)->tp_name);
+        return -1;
+    }
+
+    if (SDL_SetWindowSurfaceVSync(self->_win, vsync) == SDL_FALSE) {
+        PyErr_SetString(pgExc_SDLError,
+                        "The requested surface VSync is unsupported (the "
+                        "framebuffer may not be accelerated)");
+        return -1;
+    }
+
+#else
+    if (PyErr_WarnEx(PyExc_Warning,
+                     "Setting 'surface_vsync' requires SDL 3.2.0+", 1) == -1) {
+        return -1;
+    }
+#endif
+    return 0;
+}
+
+static PyObject *
+window_get_surface_vsync(pgWindowObject *self, void *v)
+{
+    int vsync = 0;
+#if SDL_VERSION_ATLEAST(3, 2, 0)
+    if (SDL_GetWindowSurfaceVSync(self->_win, &vsync) == SDL_FALSE) {
+        return RAISE(
+            pgExc_SDLError,
+            "Getting 'surface_vsync' requires an accelerated framebuffer");
+    }
+#else
+    if (PyErr_WarnEx(PyExc_Warning,
+                     "Getting 'surface_vsync' requires SDL 3.2.0+", 1) == -1) {
+        return NULL;
+    }
+#endif
+    return PyLong_FromLong(vsync);
+}
+
 static void
 window_dealloc(pgWindowObject *self, PyObject *_null)
 {
@@ -1399,6 +1467,8 @@ static PyGetSetDef _window_getset[] = {
      DOC_WINDOW_POSITION, NULL},
     {"opacity", (getter)window_get_opacity, (setter)window_set_opacity,
      DOC_WINDOW_OPACITY, NULL},
+    {"surface_vsync", (getter)window_get_surface_vsync,
+     (setter)window_set_surface_vsync, DOC_WINDOW_SURFACEVSYNC, NULL},
     {"id", (getter)window_get_window_id, NULL, DOC_WINDOW_ID, NULL},
     {"opengl", (getter)window_get_opengl, NULL, DOC_WINDOW_OPENGL, NULL},
     {"utility", (getter)window_get_utility, NULL, DOC_WINDOW_UTILITY, NULL},

@@ -458,6 +458,22 @@ class WindowTypeTest(unittest.TestCase):
         window = pygame.Window()
         self.assertIsInstance(window.focused, bool)
 
+    @unittest.skipIf(SDL < (3, 2, 0))
+    def test_window_surface_vsync(self):
+        window = pygame.Window()
+        try:
+            self.assertIsInstance(window.surface_vsync, int)
+            self.assertGreaterEqual(window.surface_vsync, -1)
+            for value in [0, None, False, 1, True, 2, 3, -1]:
+                window.surface_vsync = value
+                self.assertEqual(window.surface_vsync, int(bool(value)))
+        except pygame.error:
+            pass
+        with self.assertRaises(TypeError):
+            window.surface_vsync = "1"
+        with self.assertRaises(ValueError):
+            window.surface_vsync = -2
+
     def tearDown(self):
         self.win.destroy()
 

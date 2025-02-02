@@ -299,6 +299,24 @@
 
       .. versionadded:: 2.5.3
 
+   .. attribute:: surface_vsync
+
+      | :sl:`Get or set the VSync of the accelerated window framebuffer`
+      | :sg:`surface_vsync -> int`
+
+      This only works if the framebuffer of the window is accelerated, otherwise a :mod:`pygame.error` is raised.
+
+      The VSync could be:
+         * ``0``: VSync is disabled
+         * ``-1``: Late swap tearing (adaptive VSync)
+         * ``1``: Synchronize present with every vertical refresh
+         * ``2``, ``3``, ...: Synchronize present with every second/third/etc vertical refresh
+
+      Not all values are always supported so it is adviced to always wrap this with a try-except.
+
+      When setting, a value of ``None`` or ``False`` is interpreted as ``0`` while a value of ``True`` is
+      interpreted as ``1``.
+
    .. classmethod:: from_display_module
 
       | :sl:`Create a Window object using window data from display module`
