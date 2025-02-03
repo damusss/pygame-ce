@@ -247,6 +247,96 @@ pg_system_get_power_state(PyObject *self, PyObject *_null)
     return PyObject_Call(PowerState_class, return_args, return_kwargs);
 }
 
+// TRAY
+
+typedef struct {
+    PyObject_HEAD SDL_TrayEntry *_entry;
+    PyObject *parent;
+} pgTrayButtonObject;
+
+static void
+surface_dealloc(PyObject *self)
+{
+    // complex ahh
+    Py_TYPE(self)->tp_free(self);
+}
+
+typedef struct {
+    PyObject_HEAD SDL_TrayEntry *_entry;
+    PyObject *parent;
+} pgTrayCheckboxObject;
+
+typedef struct {
+    PyObject_HEAD SDL_TrayEntry *_entry;
+    PyObject *parent;
+    PyObject *items;
+} pgTraySubmenuObject;
+
+typedef struct {
+    PyObject_HEAD SDL_Tray *_tray;
+    PyObject * items;
+    char * tooltip;
+    // pgSurfaceObject *icon;
+} pgTrayObject;
+
+static PyGetSetDef traybutton_getsets[] = {{NULL, NULL, NULL, NULL, NULL}}
+static struct PyMethodDef traybutton_methods[] = {{NULL, NULL, 0, NULL}}
+
+static PyTypeObject pgTrayButton_Type = {
+    PyVarObject_HEAD_INIT(NULL, 0).tp_name = "pygame.system.TrayButton",
+    .tp_basicsize = sizeof(pgTrayButtonObject),
+    .tp_dealloc = clock_dealloc,
+    .tp_repr = (reprfunc)clock_str,
+    .tp_str = (reprfunc)clock_str,
+    .tp_doc = "doc",
+    .tp_methods = traybutton_methods,
+    .tp_getset = traybutton_getsets,
+    .tp_new = clock_new,
+};
+
+static PyGetSetDef traycheckbox_getsets[] = {{NULL, NULL, NULL, NULL, NULL}}
+
+static PyTypeObject pgTrayCheckbox_Type = {
+    PyVarObject_HEAD_INIT(NULL, 0).tp_name = "pygame.system.TrayCheckbox",
+    .tp_basicsize = sizeof(pgTrayCheckboxObject),
+    .tp_dealloc = clock_dealloc,
+    .tp_repr = (reprfunc)clock_str,
+    .tp_str = (reprfunc)clock_str,
+    .tp_doc = "doc",
+    .tp_getset = traycheckbox_getsets,
+    .tp_new = clock_new,
+    .tp_base = &pgTrayButton_Type,
+};
+
+static PyGetSetDef traysubmenu_getsets[] = {{NULL, NULL, NULL, NULL, NULL}}
+
+static PyTypeObject pgTraySubmenu_Type = {
+    PyVarObject_HEAD_INIT(NULL, 0).tp_name = "pygame.system.TraySubmenu",
+    .tp_basicsize = sizeof(pgTraySubmenuObject),
+    .tp_dealloc = clock_dealloc,
+    .tp_repr = (reprfunc)clock_str,
+    .tp_str = (reprfunc)clock_str,
+    .tp_doc = "doc",
+    .tp_getset = traysubmenu_getsets,
+    .tp_new = clock_new,
+    .tp_base = &pgTrayButton_Type,
+};
+
+static PyGetSetDef tray_getsets[] = {{NULL, NULL, NULL, NULL, NULL}}
+
+static PyTypeObject pgTray_Type = {
+    PyVarObject_HEAD_INIT(NULL, 0).tp_name = "pygame.system.Tray",
+    .tp_basicsize = sizeof(pgTrayObject),
+    .tp_dealloc = clock_dealloc,
+    .tp_repr = (reprfunc)clock_str,
+    .tp_str = (reprfunc)clock_str,
+    .tp_doc = "doc",
+    .tp_getset = tray_getsets,
+    .tp_new = clock_new,
+};
+
+// END TRAY
+
 static PyMethodDef _system_methods[] = {
     {"get_cpu_instruction_sets", pg_system_get_cpu_instruction_sets,
      METH_NOARGS, DOC_SYSTEM_GETCPUINSTRUCTIONSETS},
