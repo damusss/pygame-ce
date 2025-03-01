@@ -8,6 +8,9 @@
 /prebuilt-x??
 /prebuilt_downloads
 
+# Android prebuilts
+/prebuilt-android
+
 # macOS generated files
 .DS_Store
 

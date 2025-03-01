@@ -39,4 +39,8 @@ option('error_docs_missing', type: 'boolean', value: 'false')
 option('coverage', type: 'boolean', value: false)
 
 # Controls whether to use SDL3 instead of SDL2. The default is to use SDL2
-option('sdl_api', type: 'integer', min: 2, max: 3, value: 2)
+option('sdl_api', type: 'integer', min: 2, max: 3, value: 3)
+
+option('android_abi', type : 'string', value : 'arm64-v8a',
+  description : 'Target Android ABI (e.g., arm64-v8a, armeabi-v7a, x86, x86_64)')
+

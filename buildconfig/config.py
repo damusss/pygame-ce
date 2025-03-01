@@ -197,12 +197,12 @@ Only SDL2 is supported now.""")
             import config_emsdk as CFG
         except ImportError:
             import buildconfig.config_emsdk as CFG
-    else:
-        print_('Using UNIX configuration...\n')
-        try:
-            import config_unix as CFG
-        except ImportError:
-            import buildconfig.config_unix as CFG
+    #else:
+    #    print_('Using UNIX configuration...\n')
+    #    try:
+    #        import config_unix as CFG
+    #    except ImportError:
+    #        import buildconfig.config_unix as CFG
 
 
     if sys.platform == 'win32':
@@ -214,9 +214,9 @@ Only SDL2 is supported now.""")
     elif sysconfig.get_config_var('MACHDEP') == 'emscripten':
         additional_platform_setup = open(
             os.path.join(BASE_PATH, 'buildconfig', "Setup.Emscripten.SDL2.in")).readlines()
-    else:
-        additional_platform_setup = open(
-            os.path.join(BASE_PATH, 'buildconfig', "Setup_Unix.in")).readlines()
+    #else:
+    #    additional_platform_setup = open(
+    #        os.path.join(BASE_PATH, 'buildconfig', "Setup_Unix.in")).readlines()
 
 
     if os.path.isfile('Setup'):

@@ -19,6 +19,8 @@ foreach define : defines
     add_global_arguments(define, language: 'c')
 endforeach
 
+
+
 pg = 'pygame' # python base package name
 
 if host_machine.system() == 'windows'
@@ -29,10 +31,10 @@ elif host_machine.system() == 'linux'
     plat = 'linux'
 elif host_machine.system() == 'android'
     plat = 'android'
-    error(
-        'The meson buildconfig of pygame-ce does not support android for now.',
-        'However it may be added in the future',
-    )
+##    error(
+#        'The meson buildconfig of pygame-ce does not support android for now.',
+#        'However it may be added in the future',
+#    )
 elif host_machine.system() == 'emscripten'
     plat = 'emscripten'
     error(
@@ -90,6 +92,8 @@ endif
 
 pg_inc_dirs = []
 pg_lib_dirs = []
+
+
 if plat == 'win' and host_machine.cpu_family().startswith('x86')
     # yes, this is a bit ugly and hardcoded but it is what it is
     # TODO (middle-term goal) - Should migrate away from this
@@ -212,6 +216,36 @@ if plat == 'win' and host_machine.cpu_family().startswith('x86')
     # put dlls in root of install
     install_data(dlls, install_dir: pg_dir, install_tag: 'pg-tag')
 
+    sdl_dep = dependency(sdl, required: false)
+    if not sdl_dep.found()
+        sdl_dep = declare_dependency(
+            include_directories: pg_inc_dirs,
+            dependencies: cc.find_library(sdl, dirs: pg_lib_dirs),
+        )
+    endif
+
+elif plat == 'android'
+    base_dir = meson.current_source_dir()
+    abi = get_option('android_abi')
+    message('Android ABI is '+abi)
+    prebuilt_dir = base_dir/'prebuilt-android'
+    sdl_android_dir = prebuilt_dir/'SDL3'
+    sdl_lib_dir = join_paths(sdl_android_dir, 'lib', abi)
+    sdl_include_dir = sdl_android_dir/'include'
+    message('Using SDL3 include: ' + sdl_include_dir)
+    message('Using SDL3 library dir: ' + sdl_lib_dir)
+    cc = meson.get_compiler('c')
+    # sdl_lib = cc.find_library('SDL3', dirs: [sdl_lib_dir], required: true)
+    # sdl_lib = shared_library('SDL3')
+    sdl_dep = declare_dependency(
+        include_directories: include_directories(fs.relative_to(sdl_include_dir, base_dir)),
+        # dependencies: [sdl_lib],
+        link_args: ['-L' + sdl_lib_dir/'libSDL3.so']  # Ensure the linker finds SDL3
+        # link_with: [sdl_lib]
+    )
+    pg_inc_dirs += sdl_include_dir
+    pg_lib_dirs += sdl_lib_dir
+
 else
     bases = ['/usr/local', '/usr', '/opt/homebrew', '/opt/local']
     foreach inc_dir : bases
@@ -235,96 +269,99 @@ else
             endif
         endforeach
     endforeach
+
+    sdl_dep = dependency(sdl, required: false)
+    if not sdl_dep.found()
+        sdl_dep = declare_dependency(
+            include_directories: pg_inc_dirs,
+            dependencies: cc.find_library(sdl, dirs: pg_lib_dirs),
+        )
+    endif
 endif
 
 # TODO: add version constraints?
-sdl_dep = dependency(sdl, required: false)
-if not sdl_dep.found()
-    sdl_dep = declare_dependency(
-        include_directories: pg_inc_dirs,
-        dependencies: cc.find_library(sdl, dirs: pg_lib_dirs),
-    )
-endif
+
 
 # optional
 sdl_image_dep = dependency(sdl_image, required: false)
-if not sdl_image_dep.found()
-    sdl_image_dep = declare_dependency(
-        include_directories: pg_inc_dirs,
-        dependencies: cc.find_library(
-            sdl_image,
-            dirs: pg_lib_dirs,
-            required: get_option('image'),
-        ),
-    )
-endif
+
+#if not sdl_image_dep.found()
+#    sdl_image_dep = declare_dependency(
+#        include_directories: pg_inc_dirs,
+#        dependencies: cc.find_library(
+#            sdl_image,
+#            dirs: pg_lib_dirs,
+#            required: get_option('image'),
+#        ),
+#    )
+#endif
 
 sdl_mixer_dep = dependency(sdl_mixer, required: false)
-if not sdl_mixer_dep.found()
-    sdl_mixer_dep = declare_dependency(
-        include_directories: pg_inc_dirs,
-        dependencies: cc.find_library(
-            sdl_mixer,
-            dirs: pg_lib_dirs,
-            required: get_option('mixer'),
-        ),
-    )
-endif
+#if not sdl_mixer_dep.found()
+#    sdl_mixer_dep = declare_dependency(
+#        include_directories: pg_inc_dirs,
+#        dependencies: cc.find_library(
+#            sdl_mixer,
+#            dirs: pg_lib_dirs,
+#            required: get_option('mixer'),
+#        ),
+#    )
+#endif
 
 sdl_ttf_dep = dependency(sdl_ttf, required: false)
-if not sdl_ttf_dep.found()
-    sdl_ttf_dep = declare_dependency(
-        include_directories: pg_inc_dirs,
-        dependencies: cc.find_library(
-            sdl_ttf,
-            dirs: pg_lib_dirs,
-            required: get_option('font'),
-        ),
-    )
-endif
+#if not sdl_ttf_dep.found()
+#    sdl_ttf_dep = declare_dependency(
+#        include_directories: pg_inc_dirs,
+#        dependencies: cc.find_library(
+#            sdl_ttf,
+#            dirs: pg_lib_dirs,
+#            required: get_option('font'),
+#        ),
+#    )
+#endif
 
 freetype_dep = dependency('freetype2', required: false)
-if not freetype_dep.found()
-    freetype_dep = declare_dependency(
-        include_directories: pg_inc_dirs,
-        dependencies: cc.find_library(
-            'freetype',
-            dirs: pg_lib_dirs,
-            required: get_option('freetype'),
-        ),
-    )
-endif
+#if not freetype_dep.found()
+#    freetype_dep = declare_dependency(
+#        include_directories: pg_inc_dirs,
+#        dependencies: cc.find_library(
+#            'freetype',
+#            dirs: pg_lib_dirs,
+#            required: get_option('freetype'),
+#        ),
+#    )
+#endif
 
 portmidi_dep = dependency('portmidi', required: false)
-if not portmidi_dep.found()
-    portmidi_dep = declare_dependency(
-        include_directories: pg_inc_dirs,
-        dependencies: cc.find_library(
-            'portmidi',
-            dirs: pg_lib_dirs,
-            required: get_option('midi'),
-        ),
-    )
-endif
+#if not portmidi_dep.found()
+#    portmidi_dep = declare_dependency(
+#        include_directories: pg_inc_dirs,
+#        dependencies: cc.find_library(
+#            'portmidi',
+#            dirs: pg_lib_dirs,
+#            required: get_option('midi'),
+#        ),
+#    )
+#endif
 
 portmidi_deps = [portmidi_dep]
 
-if portmidi_dep.found()
-    # porttime can be a separate library, or be inbuilt in portmidi.
-    # So if it is available as a separate library, include it as a dependency
-    porttime_dep = dependency('porttime', required: false)
-    if not porttime_dep.found()
-        porttime_dep = cc.find_library(
-            'porttime',
-            dirs: pg_lib_dirs,
-            required: false,
-        )
-    endif
-
-    if porttime_dep.found()
-        portmidi_deps += porttime_dep
-    endif
-endif
+#if portmidi_dep.found()
+#    # porttime can be a separate library, or be inbuilt in portmidi.
+#    # So if it is available as a separate library, include it as a dependency
+#    porttime_dep = dependency('porttime', required: false)
+#    if not porttime_dep.found()
+#        porttime_dep = cc.find_library(
+#            'porttime',
+#            dirs: pg_lib_dirs,
+#            required: false,
+#        )
+#    endif
+#
+#    if porttime_dep.found()
+#        portmidi_deps += porttime_dep
+#    endif
+#endif
 
 pg_base_deps = [sdl_dep, py_dep]
 

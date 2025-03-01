@@ -1,0 +1,29 @@
+# android_cross_file.txt
+
+[binaries]
+# Adjust these paths to point to your Android NDK toolchain. B:/Programs/AndroidSDK/ndk/28.0.13004108/
+c = 'B:/Programs/AndroidSDK/ndk/28.0.13004108/toolchains/llvm/prebuilt/windows-x86_64/bin/clang'
+cpp = 'B:/Programs/AndroidSDK/ndk/28.0.13004108/toolchains/llvm/prebuilt/windows-x86_64/bin/clang++'
+ar = 'B:/Programs/AndroidSDK/ndk/28.0.13004108/toolchains/llvm/prebuilt/windows-x86_64/bin/llvm-ar'
+strip = 'B:/Programs/AndroidSDK/ndk/28.0.13004108/toolchains/llvm/prebuilt/windows-x86_64/bin/llvm-strip'
+
+[host_machine]
+system = 'android'
+cpu_family = 'arm'
+cpu = 'arm64'  # or 'armv7' if you're targeting 32-bit
+endian = 'little'
+
+[properties]
+# Android executables need an emulator wrapper if you were running tests, for example.
+needs_exe_wrapper = true
+# Pass target and sysroot flags.
+
+
+[built-in opetions]
+sys_root = 'B:/Programs/AndroidSDK/ndk/28.0.13004108/toolchains/llvm/prebuilt/windows-x86_64/sysroot'
+c_args = ['--target=arm54-none-linux-androideabi', '--sysroot=B:/Programs/AndroidSDK/ndk/28.0.13004108/toolchains/llvm/prebuilt/windows-x86_64/sysroot']
+cpp_args = ['--target=arm54-none-linux-androideabi', '--sysroot=B:/Programs/AndroidSDK/ndk/28.0.13004108/toolchains/llvm/prebuilt/windows-x86_64/sysroot']
+c_link_args = ['-LB:/Py/Contributing/PG/pygame-ce/prebuilt-android/SDL3/lib/arm64-v8a/libSDL3.so']
+#b_asneeded = false
+#b_rpath = false
+# meson setup build-android --cross-file android_cross_file.txt -Dandroid_abi=arm64-v8a

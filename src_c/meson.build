@@ -39,6 +39,7 @@ display = py.extension_module(
 )
 endif
 
+if sdl_api != 3
 event = py.extension_module(
     'event',
     'event.c',
@@ -47,6 +48,7 @@ event = py.extension_module(
     install: true,
     subdir: pg,
 )
+endif
 
 key = py.extension_module(
     'key',
