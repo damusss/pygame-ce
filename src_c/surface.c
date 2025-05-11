@@ -2487,13 +2487,13 @@ scroll_default(int h, int dx, int dy, int pitch, int span, int xoffset,
             if ((dy < 0 && pastesrc >= startsrc) ||
                 (dy > 0 && pastesrc <= endsrc)) {
                 if (dx > 0) {
-                    memcpy(pastesrc + xoffset, linesrc, span - xoffset);
+                    memmove(pastesrc + xoffset, linesrc, span - xoffset);
                 }
                 else if (dx < 0) {
-                    memcpy(pastesrc, linesrc - xoffset, span + xoffset);
+                    memmove(pastesrc, linesrc - xoffset, span + xoffset);
                 }
                 else {
-                    memcpy(pastesrc, linesrc, span);
+                    memmove(pastesrc, linesrc, span);
                 }
                 if (erase) {
                     memset(linesrc, 0, span);
@@ -2513,13 +2513,13 @@ scroll_default(int h, int dx, int dy, int pitch, int span, int xoffset,
         // No y-shifting, we only need to move pixels on the same line
         while (h--) {
             if (dx > 0) {
-                memcpy(linesrc + xoffset, linesrc, span - xoffset);
+                memmove(linesrc + xoffset, linesrc, span - xoffset);
                 if (erase) {
                     memset(linesrc, 0, xoffset);
                 }
             }
             else if (dx < 0) {
-                memcpy(linesrc, linesrc - xoffset, span + xoffset);
+                memmove(linesrc, linesrc - xoffset, span + xoffset);
                 if (erase) {
                     memset(linesrc + span + xoffset, 0, -xoffset);
                 }
