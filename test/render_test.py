@@ -93,6 +93,33 @@ class RendererTest(unittest.TestCase):
         for point in test_points:
             self.assertEqual(surf.get_at(point), pygame.Color(255, 255, 0, 255))
 
+    def test_draw_lines(self):
+        self.renderer.draw_color = "YELLOW"
+        self.renderer.draw_lines([(10, 10), (40, 40), (70, 10)])
+        self.renderer.draw_lines(points=((10, 10), (40, 40), (70, 10)))
+        surf = self.renderer.to_surface()
+        test_points = [
+            (10, 10),
+            (20, 20),
+            (30, 30),
+            (40, 40),
+            (50, 30),
+            (60, 20),
+            (70, 10),
+        ]
+        for point in test_points:
+            self.assertEqual(surf.get_at(point), pygame.Color(255, 255, 0, 255))
+        with self.assertRaises(TypeError):
+            self.renderer.draw_lines(1)
+        with self.assertRaises(TypeError):
+            self.renderer.draw_lines([(10, 10), "20, 20"])
+        with self.assertRaises(ValueError):
+            self.renderer.draw_lines([(10, 10)])
+        with self.assertRaises(TypeError):
+            self.renderer.draw_lines((10, 10))
+        with self.assertRaises(TypeError):
+            self.renderer.draw_lines(pnts=[(10, 10), (20, 20)])
+
     def test_draw_triangle(self):
         self.renderer.draw_color = "YELLOW"
         self.renderer.draw_triangle((10, 10), (10, 40), (40, 10))

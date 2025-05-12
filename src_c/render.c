@@ -104,6 +104,55 @@ renderer_draw_line(pgRendererObject *self, PyObject *args, PyObject *kwargs)
 }
 
 static PyObject *
+renderer_draw_lines(pgRendererObject *self, PyObject *args, PyObject *kwargs)
+{
+    PyObject *points_sequence, *item;
+    SDL_FPoint *points;
+    float x, y;
+    int result;
+    Py_ssize_t count;
+
+    static char *keywords[] = {"points", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O", keywords,
+                                     &points_sequence)) {
+        return NULL;
+    }
+
+    if (!PySequence_Check(points_sequence)) {
+        return RAISE(PyExc_TypeError,
+                     "points argument must be a sequence of number pairs");
+    }
+    count = PySequence_Length(points_sequence);
+    if (count < 2) {
+        return RAISE(PyExc_ValueError,
+                     "points argument must contain 2 or more points");
+    }
+
+    points = PyMem_New(SDL_FPoint, count);
+    if (points == NULL) {
+        return PyErr_NoMemory();
+    }
+
+    for (int i = 0; i < count; i++) {
+        item = PySequence_GetItem(points_sequence, i);
+        result = pg_TwoFloatsFromObj(item, &x, &y);
+        Py_DECREF(item);
+
+        if (!result) {
+            PyMem_Free(points);
+            return RAISE(PyExc_TypeError, "points must be number pairs");
+        }
+
+        points[i].x = x;
+        points[i].y = y;
+    }
+
+    RENDERER_ERROR_CHECK(
+        SDL_RenderDrawLinesF(self->renderer, points, (int)count));
+    Py_RETURN_NONE;
+}
+
+static PyObject *
 renderer_draw_rect(pgRendererObject *self, PyObject *args, PyObject *kwargs)
 {
     PyObject *rectobj;
@@ -561,6 +610,8 @@ static PyMethodDef renderer_methods[] = {
     {"draw_point", (PyCFunction)renderer_draw_point,
      METH_VARARGS | METH_KEYWORDS, DOC_SDL2_VIDEO_RENDERER_DRAWPOINT},
     {"draw_line", (PyCFunction)renderer_draw_line,
+     METH_VARARGS | METH_KEYWORDS, DOC_SDL2_VIDEO_RENDERER_DRAWLINE},
+    {"draw_lines", (PyCFunction)renderer_draw_lines,
      METH_VARARGS | METH_KEYWORDS, DOC_SDL2_VIDEO_RENDERER_DRAWLINE},
     {"draw_rect", (PyCFunction)renderer_draw_rect,
      METH_VARARGS | METH_KEYWORDS, DOC_SDL2_VIDEO_RENDERER_DRAWRECT},
