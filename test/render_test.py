@@ -96,6 +96,7 @@ class RendererTest(unittest.TestCase):
     def test_draw_lines(self):
         self.renderer.draw_color = "YELLOW"
         self.renderer.draw_lines([(10, 10), (40, 40), (70, 10)])
+        self.renderer.draw_lines([(10, 10), (40, 40), (70, 10)], closed=False)
         self.renderer.draw_lines(points=((10, 10), (40, 40), (70, 10)))
         surf = self.renderer.to_surface()
         test_points = [
@@ -109,6 +110,10 @@ class RendererTest(unittest.TestCase):
         ]
         for point in test_points:
             self.assertEqual(surf.get_at(point), pygame.Color(255, 255, 0, 255))
+        self.renderer.draw_lines([(10, 10), (40, 40), (70, 10)], closed=True)
+        surf = self.renderer.to_surface()
+        for point in [(20, 10), (60, 10)]:
+            self.assertEqual(surf.get_at(point), pygame.Color(255, 255, 0, 255))
         with self.assertRaises(TypeError):
             self.renderer.draw_lines(1)
         with self.assertRaises(TypeError):
@@ -119,6 +124,41 @@ class RendererTest(unittest.TestCase):
             self.renderer.draw_lines((10, 10))
         with self.assertRaises(TypeError):
             self.renderer.draw_lines(pnts=[(10, 10), (20, 20)])
+        with self.assertRaises(TypeError):
+            self.renderer.draw_lines([(1, 1), (2, 2)], True)
+
+    def test_fill_convex_poly(self):
+        self.renderer.draw_color = "YELLOW"
+        self.renderer.fill_convex_poly([(10, 40), (40, 10), (70, 40), (40, 70)])
+        surf = self.renderer.to_surface()
+        test_points = [
+            (10, 40),
+            (25, 25),
+            (40, 10),
+            (55, 25),
+            (70, 40),
+            (55, 55),
+            (40, 70),
+            (25, 55),
+            (40, 40),
+            (40, 25),
+            (25, 40),
+            (40, 55),
+            (55, 40),
+        ]
+        for point in test_points:
+            self.assertEqual(surf.get_at(point), pygame.Color(255, 255, 0, 255))
+        with self.assertRaises(TypeError):
+            self.renderer.fill_convex_poly(1)
+        with self.assertRaises(TypeError):
+            self.renderer.fill_convex_poly([(10, 10), (20, 20), "20, 20"])
+        for points in [[(10, 10)], [(10, 10), (20, 20)]]:
+            with self.assertRaises(ValueError):
+                self.renderer.fill_convex_poly(points)
+        with self.assertRaises(TypeError):
+            self.renderer.fill_convex_poly((10, 10))
+        with self.assertRaises(TypeError):
+            self.renderer.fill_convex_poly(pnts=[(10, 10), (20, 20), (30, 30)])
 
     def test_draw_triangle(self):
         self.renderer.draw_color = "YELLOW"

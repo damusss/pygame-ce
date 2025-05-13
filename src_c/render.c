@@ -110,11 +110,12 @@ renderer_draw_lines(pgRendererObject *self, PyObject *args, PyObject *kwargs)
     SDL_FPoint *points;
     float x, y;
     int result;
+    int closed;
     Py_ssize_t count;
 
-    static char *keywords[] = {"points", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O", keywords,
-                                     &points_sequence)) {
+    static char *keywords[] = {"points", "closed", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|$p", keywords,
+                                     &points_sequence, &closed)) {
         return NULL;
     }
 
@@ -128,7 +129,7 @@ renderer_draw_lines(pgRendererObject *self, PyObject *args, PyObject *kwargs)
                      "points argument must contain 2 or more points");
     }
 
-    points = PyMem_New(SDL_FPoint, count);
+    points = PyMem_New(SDL_FPoint, closed ? count + 1 : count);
     if (points == NULL) {
         return PyErr_NoMemory();
     }
@@ -146,9 +147,13 @@ renderer_draw_lines(pgRendererObject *self, PyObject *args, PyObject *kwargs)
         points[i].x = x;
         points[i].y = y;
     }
+    if (closed) {
+        points[count].x = points[0].x;
+        points[count].y = points[0].y;
+    }
 
-    RENDERER_ERROR_CHECK(
-        SDL_RenderDrawLinesF(self->renderer, points, (int)count));
+    RENDERER_ERROR_CHECK(SDL_RenderDrawLinesF(
+        self->renderer, points, (int)(closed ? count + 1 : count)));
     Py_RETURN_NONE;
 }
 
@@ -280,6 +285,84 @@ renderer_fill_quad(pgRendererObject *self, PyObject *args, PyObject *kwargs)
     RAISE(PyExc_TypeError, "fill_quad() requires SDL 2.0.18 or newer");
     Py_RETURN_NONE;
 #endif
+}
+
+static PyObject *
+renderer_fill_convex_poly(pgRendererObject *self, PyObject *args,
+                          PyObject *kwargs)
+{
+#if SDL_VERSION_ATLEAST(2, 0, 18)
+    PyObject *points_sequence, *item;
+    SDL_Vertex *vertices;
+    float x, y;
+    int result;
+    Py_ssize_t count;
+    SDL_Color draw_color;
+
+    static char *keywords[] = {"points", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O", keywords,
+                                     &points_sequence)) {
+        return NULL;
+    }
+
+    if (!PySequence_Check(points_sequence)) {
+        return RAISE(PyExc_TypeError,
+                     "points argument must be a sequence of number pairs");
+    }
+    count = PySequence_Length(points_sequence);
+    if (count < 3) {
+        return RAISE(PyExc_ValueError,
+                     "points argument must contain more than 2 points");
+    }
+
+    RENDERER_ERROR_CHECK(SDL_GetRenderDrawColor(self->renderer, &draw_color.r,
+                                                &draw_color.g, &draw_color.b,
+                                                &draw_color.a))
+
+    int index_count = ((int)count - 2) * 3;
+    vertices = PyMem_New(SDL_Vertex, count);
+    if (vertices == NULL) {
+        return PyErr_NoMemory();
+    }
+    int *indices = PyMem_New(int, index_count);
+    if (!indices) {
+        PyMem_Free(vertices);
+        return PyErr_NoMemory();
+    }
+
+    int k = 0;
+    for (int i = 0; i < count; i++) {
+        item = PySequence_GetItem(points_sequence, i);
+        result = pg_TwoFloatsFromObj(item, &x, &y);
+        Py_DECREF(item);
+
+        if (!result) {
+            PyMem_Free(vertices);
+            PyMem_Free(indices);
+            return RAISE(PyExc_TypeError, "points must be number pairs");
+        }
+
+        vertices[i].color = draw_color;
+        vertices[i].position.x = x;
+        vertices[i].position.y = y;
+
+        if (i > 0 && i < count - 1) {
+            indices[k++] = 0;
+            indices[k++] = i;
+            indices[k++] = i + 1;
+        }
+    }
+
+    if (SDL_RenderGeometry(self->renderer, NULL, vertices, (int)count, indices,
+                           index_count) < 0) {
+        PyMem_Free(vertices);
+        PyMem_Free(indices);
+        return RAISE(pgExc_SDLError, SDL_GetError());
+    }
+#else
+    RAISE(PyExc_TypeError, "fill_convex_poly() requires SDL 2.0.18 or newer")
+#endif
+    Py_RETURN_NONE;
 }
 
 static PyObject *
@@ -624,6 +707,8 @@ static PyMethodDef renderer_methods[] = {
     {"fill_triangle", (PyCFunction)renderer_fill_triangle,
      METH_VARARGS | METH_KEYWORDS, DOC_SDL2_VIDEO_RENDERER_FILLTRIANGLE},
     {"fill_quad", (PyCFunction)renderer_fill_quad,
+     METH_VARARGS | METH_KEYWORDS, DOC_SDL2_VIDEO_RENDERER_FILLQUAD},
+    {"fill_convex_poly", (PyCFunction)renderer_fill_convex_poly,
      METH_VARARGS | METH_KEYWORDS, DOC_SDL2_VIDEO_RENDERER_FILLQUAD},
     {"present", (PyCFunction)renderer_present, METH_NOARGS,
      DOC_SDL2_VIDEO_RENDERER_PRESENT},
