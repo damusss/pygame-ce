@@ -32,15 +32,43 @@ class Renderer:
     ) -> Rect: ...
     def clear(self) -> None: ...
     def draw_line(self, p1: Point, p2: Point) -> None: ...
-    def draw_lines(
-        self, points: SequenceLike[Point], *, closed: bool = False
-    ) -> None: ...
+    def draw_lines(self, points: SequenceLike[Point], *, closed: bool = False) -> None:
+        """Draw multiple contiguous straight line segments
+
+        Draw a sequence of contiguous line segments from a sequence of at least 2 points
+        on the renderer using the :meth:`Renderer.draw_color`. Effectively draws
+        a polygon if the closed argument is True.
+
+        :param points: a sequence of 2 or more (x, y) coordinates
+        :type points: :data:`pygame.typing.SequenceLike` of :data:`pygame.typing.Point`
+        :param bool closed: When True, add an extra segment from the last point
+           to the first one, closing the shape.
+
+        :raises ValueError: if less than two points are provided.
+
+        .. versionadded:: 2.5.4
+        """
+
     def draw_point(self, point: Point) -> None: ...
     def draw_quad(self, p1: Point, p2: Point, p3: Point, p4: Point) -> None: ...
     def draw_rect(self, rect: RectLike) -> None: ...
     def draw_triangle(self, p1: Point, p2: Point, p3: Point) -> None: ...
     def fill_quad(self, p1: Point, p2: Point, p3: Point, p4: Point) -> None: ...
-    def fill_convex_poly(self, points: SequenceLike[Point]) -> None: ...
+    def fill_convex_poly(self, points: SequenceLike[Point]) -> None:
+        """Draw a filled convex polygon
+
+        Draw a filled polygon from a sequence of at least 3 points on the renderer using the
+        :meth:`Renderer.draw_color`. The points are expected to form a convex shape,
+        the only kind supported by the triangle fan algorithm used.
+
+        :param points: a sequence of 3 or more (x, y) coordinates
+        :type points: :data:`pygame.typing.SequenceLike` of :data:`pygame.typing.Point`
+
+        :raises ValueError: if less than three points are provided.
+
+        .. versionadded:: 2.5.4
+        """
+
     def fill_rect(self, rect: RectLike) -> None: ...
     def fill_triangle(self, p1: Point, p2: Point, p3: Point) -> None: ...
     def get_viewport(self) -> Rect: ...
