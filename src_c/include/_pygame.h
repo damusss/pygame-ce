@@ -580,6 +580,13 @@ typedef struct {
     SDL_BlendMode blend_mode;
 } pgImageObject;
 
+typedef struct {
+    PyObject_HEAD SDL_Vertex *vertices;
+    int *indices;
+    int vertex_count;
+    int index_count;
+} pgGeometryMeshObject;
+
 #ifndef PYGAMEAPI_RENDER_INTERNAL
 #define pgRenderer_Type (*(PyTypeObject *)PYGAMEAPI_GET_SLOT(_render, 0))
 #define pgTexture_Type (*(PyTypeObject *)PYGAMEAPI_GET_SLOT(_render, 1))

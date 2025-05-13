@@ -12,6 +12,8 @@ static PyTypeObject pgTexture_Type;
 
 static PyTypeObject pgImage_Type;
 
+static PyTypeObject pgGeometryMesh_Type;
+
 #define pgRenderer_Check(x) \
     (PyObject_IsInstance((x), (PyObject *)&pgRenderer_Type))
 
@@ -231,6 +233,44 @@ renderer_fill_quad(pgRendererObject *self, PyObject *args, PyObject *kwargs)
     RAISE(PyExc_TypeError, "fill_quad() requires SDL 2.0.18 or newer");
     Py_RETURN_NONE;
 #endif
+}
+
+static PyObject *
+renderer_render_geometry(pgRendererObject *self, PyObject *args,
+                         PyObject *kwargs)
+{
+#if SDL_VERSION_ATLEAST(2, 0, 18)
+    PyObject *mesh_obj;
+    PyObject *texture_obj = Py_None;
+    SDL_Texture *texture = NULL;
+
+    static char *keywords[] = {"mesh", "texture", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|O", keywords,
+                                     &mesh_obj)) {
+        return NULL;
+    }
+
+    if (!PyObject_IsInstance(mesh_obj, (PyObject *)&pgGeometryMesh_Type)) {
+        return RAISE(PyExc_TypeError, "mesh must be a GeometryMesh instance");
+    }
+
+    if (!Py_IsNone(texture_obj)) {
+        if (!PyObject_IsInstance(texture_obj, (PyObject *)&pgTexture_Type)) {
+            return RAISE(PyExc_TypeError,
+                         "texture must be a Texture instance or None");
+        }
+        texture = ((pgTextureObject *)texture_obj)->texture;
+    }
+
+    pgGeometryMeshObject *mesh = (pgGeometryMeshObject *)mesh_obj;
+    RENDERER_ERROR_CHECK(SDL_RenderGeometry(self->renderer, texture,
+                                            mesh->vertices, mesh->vertex_count,
+                                            mesh->indices, mesh->index_count))
+#else
+    return RAISE(PyExc_TypeError,
+                 "render_geometry() requires SDL 2.0.18 or newer");
+#endif
+    Py_RETURN_NONE;
 }
 
 static PyObject *
@@ -556,6 +596,237 @@ image_renderer_draw(pgImageObject *self, PyObject *area, PyObject *dest)
     return;
 }
 
+/* GeometryMesh implementation */
+
+static PyObject *
+mesh_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
+{
+    pgGeometryMeshObject *self;
+
+    self = (pgGeometryMeshObject *)type->tp_alloc(type, 0);
+    if (self) {
+        self->vertices = NULL;
+        self->indices = NULL;
+        self->vertex_count = -1;
+        self->index_count = -1;
+    }
+    return (PyObject *)self;
+}
+
+static int
+_mesh_get_vertex(PyObject *vertex_obj, float *x, float *y, Uint8 *r, Uint8 *g,
+                 Uint8 *b, Uint8 *a, float *tex_coord_x, float *tex_coord_y)
+{
+    int result;
+    Uint8 rgba[4];
+
+    if (!PySequence_Check(vertex_obj)) {
+        RAISERETURN(PyExc_TypeError,
+                    "each vertex should be a sequence of (poistion, "
+                    "color, tex_coordinate)",
+                    -1);
+    }
+    if (PySequence_Length(vertex_obj) != 3) {
+        RAISERETURN(PyExc_TypeError,
+                    "each vertex should be a sequence of (poistion, "
+                    "color, tex_coordinate)",
+                    -1);
+    }
+
+    PyObject *position_obj = PySequence_GetItem(vertex_obj, 0);
+    result = pg_TwoFloatsFromObj(position_obj, x, y);
+    Py_DECREF(position_obj);
+    if (result < 0) {
+        RAISERETURN(PyExc_TypeError,
+                    "each vertex's position should be a coordinate (x, y)",
+                    -1);
+    }
+
+    PyObject *color_obj = PySequence_GetItem(vertex_obj, 1);
+    result = pg_RGBAFromObjEx(color_obj, rgba, PG_COLOR_HANDLE_ALL);
+    Py_DECREF(color_obj);
+    if (result < 0) {
+        RAISERETURN(PyExc_TypeError, "invalid vertex color", -1);
+    }
+    *r = rgba[0];
+    *g = rgba[1];
+    *b = rgba[2];
+    *a = rgba[3];
+
+    PyObject *tex_coord_obj = PySequence_GetItem(vertex_obj, 2);
+    result = pg_TwoFloatsFromObj(tex_coord_obj, tex_coord_x, tex_coord_y);
+    Py_DECREF(tex_coord_obj);
+    if (result < 0) {
+        RAISERETURN(PyExc_TypeError,
+                    "each vertex's tex coord should be a coordinate (x, y)",
+                    -1);
+    }
+
+    return 0;
+}
+
+static int
+_mesh_rebuild(pgGeometryMeshObject *mesh, PyObject *vertices_seq,
+              PyObject *indices_seq)
+{
+    PyObject *item;
+    int vertex_count, index_count;
+    SDL_Vertex *vertices;
+    int *indices = NULL;
+    int use_indices = 1;
+    float cur_x, cur_y, cur_tex_x, cur_tex_y;
+    Uint8 cur_r, cur_g, cur_b, cur_a;
+    int result;
+
+    if (!PySequence_Check(vertices_seq)) {
+        RAISERETURN(PyExc_TypeError,
+                    "vertices argument must be a sequence of vertices", -1);
+    }
+    if (!Py_IsNone(indices_seq)) {
+        if (!PySequence_Check(vertices_seq)) {
+            RAISERETURN(
+                PyExc_TypeError,
+                "indices argument must be a sequence of integers or None", -1);
+        }
+        index_count = (int)PySequence_Length(indices_seq);
+    }
+    else {
+        use_indices = 0;
+    }
+    vertex_count = (int)PySequence_Length(vertices_seq);
+
+    if (mesh->vertex_count != vertex_count && mesh->vertices != NULL) {
+        PyMem_Free(mesh->vertices);
+        mesh->vertices = NULL;
+    }
+    else {
+        vertices = mesh->vertices;
+    }
+
+    if (mesh->index_count != index_count && mesh->indices != NULL) {
+        PyMem_Free(mesh->indices);
+        mesh->indices = NULL;
+    }
+    else {
+        indices = mesh->indices;
+    }
+
+    if (!vertices) {
+        vertices = PyMem_New(SDL_Vertex, vertex_count);
+    }
+    if (!vertices) {
+        PyErr_NoMemory();
+        return -1;
+    }
+    if (use_indices) {
+        if (!indices) {
+            indices = PyMem_New(int, index_count);
+        }
+        if (!indices) {
+            PyMem_Free(vertices);
+            PyErr_NoMemory();
+            return -1;
+        }
+    }
+
+    for (int vi = 0; vi < vertex_count; vi++) {
+        item = PySequence_GetItem(vertices_seq, (Py_ssize_t)vi);
+        result = _mesh_get_vertex(item, &cur_x, &cur_y, &cur_r, &cur_g, &cur_b,
+                                  &cur_a, &cur_tex_x, &cur_tex_y);
+        Py_DECREF(item);
+        if (result < 0) {
+            PyMem_Free(vertices);
+            if (use_indices) {
+                PyMem_Free(indices);
+            }
+            return -1;  // exception set
+        }
+
+        vertices[vi].position.x = cur_x;
+        vertices[vi].position.y = cur_y;
+        vertices[vi].color.r = cur_r;
+        vertices[vi].color.g = cur_g;
+        vertices[vi].color.b = cur_b;
+        vertices[vi].color.a = cur_a;
+        vertices[vi].tex_coord.x = cur_tex_x;
+        vertices[vi].tex_coord.y = cur_tex_y;
+    }
+
+    if (use_indices) {
+        for (int ii = 0; ii < index_count; ii++) {
+            item = PySequence_GetItem(indices_seq, (Py_ssize_t)ii);
+            if (!PyLong_Check(item)) {
+                Py_DECREF(item);
+                PyMem_Free(vertices);
+                PyMem_Free(indices);
+                RAISERETURN(PyExc_TypeError, "indices must be integers", -1);
+            }
+            int index = PyLong_AsInt(item);
+            Py_DECREF(item);
+            if (PyErr_Occurred()) {
+                PyMem_Free(vertices);
+                PyMem_Free(indices);
+                return -1;
+            }
+            indices[ii] = index;
+        }
+    }
+
+    mesh->vertices = vertices;
+    mesh->indices = indices;
+    mesh->index_count = index_count;
+    mesh->vertex_count = vertex_count;
+    return 0;
+}
+
+static int
+mesh_init(pgGeometryMeshObject *self, PyObject *args, PyObject *kwargs)
+{
+    PyObject *vertices_seq;
+    PyObject *indices_seq = Py_None;
+
+    char *keywords[] = {"vertices", "indices", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|O", keywords,
+                                     &vertices_seq, &indices_seq)) {
+        return -1;
+    }
+
+    if (_mesh_rebuild(self, vertices_seq, indices_seq) < 0) {
+        return -1;  // exception set
+    }
+    return 0;
+}
+
+static void
+mesh_dealloc(pgGeometryMeshObject *self, PyObject *_null)
+{
+    if (self->vertices) {
+        PyMem_Free(self->vertices);
+    }
+    if (self->indices) {
+        PyMem_Free(self->indices);
+    }
+    Py_TYPE(self)->tp_free(self);
+}
+
+static PyObject *
+mesh_update(pgGeometryMeshObject *self, PyObject *args, PyObject *kwargs)
+{
+    PyObject *vertices_seq;
+    PyObject *indices_seq = Py_None;
+
+    char *keywords[] = {"vertices", "indices", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|O", keywords,
+                                     &vertices_seq, &indices_seq)) {
+        return NULL;
+    }
+
+    if (_mesh_rebuild(self, vertices_seq, indices_seq) < 0) {
+        return NULL;  // exception set
+    }
+    Py_RETURN_NONE;
+}
+
 /* Module definition */
 static PyMethodDef renderer_methods[] = {
     {"draw_point", (PyCFunction)renderer_draw_point,
@@ -573,6 +844,8 @@ static PyMethodDef renderer_methods[] = {
     {"fill_triangle", (PyCFunction)renderer_fill_triangle,
      METH_VARARGS | METH_KEYWORDS, DOC_SDL2_VIDEO_RENDERER_FILLTRIANGLE},
     {"fill_quad", (PyCFunction)renderer_fill_quad,
+     METH_VARARGS | METH_KEYWORDS, DOC_SDL2_VIDEO_RENDERER_FILLQUAD},
+    {"render_geometry", (PyCFunction)renderer_render_geometry,
      METH_VARARGS | METH_KEYWORDS, DOC_SDL2_VIDEO_RENDERER_FILLQUAD},
     {"present", (PyCFunction)renderer_present, METH_NOARGS,
      DOC_SDL2_VIDEO_RENDERER_PRESENT},
@@ -618,6 +891,10 @@ static PyMethodDef image_methods[] = {{NULL, NULL, 0, NULL}};
 
 static PyGetSetDef image_getset[] = {{NULL, 0, NULL, NULL, NULL}};
 
+static PyMethodDef mesh_methods[] = {
+    {"update", (PyCFunction)mesh_update, METH_VARARGS | METH_KEYWORDS, ""},
+    {NULL, NULL, 0, NULL}};
+
 static PyTypeObject pgRenderer_Type = {
     PyVarObject_HEAD_INIT(NULL, 0).tp_name = "pygame._render.Renderer",
     .tp_basicsize = sizeof(pgRendererObject),
@@ -643,6 +920,16 @@ static PyTypeObject pgImage_Type = {
     .tp_doc = DOC_SDL2_VIDEO_IMAGE, .tp_methods = image_methods,
     //.tp_init = (initproc)image_init,
     .tp_new = PyType_GenericNew, .tp_getset = image_getset};
+
+static PyTypeObject pgGeometryMesh_Type = {
+    PyVarObject_HEAD_INIT(NULL, 0).tp_name = "pygame._render.GeometryMesh",
+    .tp_basicsize = sizeof(pgGeometryMeshObject),
+    .tp_dealloc = (destructor)mesh_dealloc,
+    .tp_doc = "",
+    .tp_methods = mesh_methods,
+    .tp_init = (initproc)mesh_init,
+    .tp_new = mesh_new,
+};
 
 static PyMethodDef _render_methods[] = {{NULL, NULL, 0, NULL}};
 
@@ -701,6 +988,10 @@ MODINIT_DEFINE(_render)
         return NULL;
     }
 
+    if (PyType_Ready(&pgGeometryMesh_Type) < 0) {
+        return NULL;
+    }
+
     /* create the module */
     module = PyModule_Create(&_module);
     if (module == 0) {
@@ -724,6 +1015,14 @@ MODINIT_DEFINE(_render)
     Py_INCREF(&pgImage_Type);
     if (PyModule_AddObject(module, "Image", (PyObject *)&pgImage_Type)) {
         Py_DECREF(&pgImage_Type);
+        Py_DECREF(module);
+        return NULL;
+    }
+
+    Py_INCREF(&pgGeometryMesh_Type);
+    if (PyModule_AddObject(module, "GeometryMesh",
+                           (PyObject *)&pgGeometryMesh_Type)) {
+        Py_DECREF(&pgGeometryMesh_Type);
         Py_DECREF(module);
         return NULL;
     }
