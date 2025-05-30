@@ -4595,6 +4595,8 @@ pgSurface_Blit(pgSurfaceObject *dstobj, pgSurfaceObject *srcobj,
     return result != 0;
 }
 
+#include "pixel_format.c" /* PIXEL FORMAT */
+
 static PyMethodDef _surface_methods[] = {{NULL, NULL, 0, NULL}};
 
 MODINIT_DEFINE(surface)
@@ -4641,6 +4643,10 @@ MODINIT_DEFINE(surface)
         return NULL;
     }
 
+    if (PyType_Ready(&pgPixelFormat_Type) < 0) {
+        return NULL;
+    }
+
     /* create the module */
     module = PyModule_Create(&_module);
     if (module == NULL) {
@@ -4658,6 +4664,12 @@ MODINIT_DEFINE(surface)
 
     if (PyModule_AddObjectRef(module, "Surface",
                               (PyObject *)&pgSurface_Type)) {
+        Py_DECREF(module);
+        return NULL;
+    }
+
+    if (PyModule_AddObjectRef(module, "PixelFormat",
+                              (PyObject *)&pgPixelFormat_Type)) {
         Py_DECREF(module);
         return NULL;
     }
