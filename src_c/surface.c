@@ -171,6 +171,8 @@ surf_get_size(PyObject *self, PyObject *args);
 static PyObject *
 surf_get_losses(PyObject *self, PyObject *args);
 static PyObject *
+surf_get_format(PyObject *self, PyObject *_null);
+static PyObject *
 surf_get_masks(PyObject *self, PyObject *args);
 static PyObject *
 surf_set_masks(PyObject *self, PyObject *args);
@@ -225,6 +227,8 @@ static SDL_Surface *
 pg_DisplayFormat(SDL_Surface *surface);
 static int
 _PgSurface_SrcAlpha(SDL_Surface *surf);
+static PyObject *
+surface_get_pixel_format(PyObject *self, PyObject *args, PyObject *kwargs);
 
 static PyGetSetDef surface_getsets[] = {
     {"_pixels_address", (getter)surf_get_pixels_address, NULL,
@@ -302,7 +306,7 @@ static struct PyMethodDef surface_methods[] = {
     {"set_shifts", surf_set_shifts, METH_VARARGS, DOC_SURFACE_SETSHIFTS},
 
     {"get_losses", surf_get_losses, METH_NOARGS, DOC_SURFACE_GETLOSSES},
-
+    {"get_format", surf_get_format, METH_NOARGS, DOC_SURFACE_GETFORMAT},
     {"subsurface", surf_subsurface, METH_VARARGS, DOC_SURFACE_SUBSURFACE},
     {"get_offset", surf_get_offset, METH_NOARGS, DOC_SURFACE_GETOFFSET},
     {"get_abs_offset", surf_get_abs_offset, METH_NOARGS,
@@ -489,6 +493,8 @@ surface_init(pgSurfaceObject *self, PyObject *args, PyObject *kwds)
 #else
     SDL_PixelFormat default_format;
     default_format.palette = NULL;
+    int format_ready = 0;
+    PG_PixelFormatEnum ready_format;
 #endif
 
     char *kwids[] = {"size", "flags", "depth", "masks", NULL};
@@ -546,6 +552,16 @@ surface_init(pgSurfaceObject *self, PyObject *args, PyObject *kwds)
         }
 
         format = SDL_MasksToPixelFormatEnum(bpp, Rmask, Gmask, Bmask, Amask);
+    }
+    else if (depth && PyObject_HasAttrString(depth, "format")) {
+        PyObject *format_obj = PyObject_GetAttrString(depth, "format");
+        if (!format_obj) {
+            return -1;
+        }
+        format = PyLong_AsUnsignedLong(format_obj);
+        if (PyErr_Occurred()) {
+            return -1;
+        }
     }
     else if (depth && PyNumber_Check(depth)) { /* use default masks */
         if (!pg_IntFromObj(depth, &bpp)) {
@@ -708,6 +724,19 @@ surface_init(pgSurfaceObject *self, PyObject *args, PyObject *kwds)
             return -1;
         }
     }
+    else if (depth && PyObject_HasAttrString(
+                          depth, "format")) { /* may be using a PixelFormat (or
+                                                 compatible) object */
+        PyObject *format_obj = PyObject_GetAttrString(depth, "format");
+        if (!format_obj) {
+            return -1;
+        }
+        ready_format = PyLong_AsUnsignedLong(format_obj);
+        if (PyErr_Occurred()) {
+            return -1;
+        }
+        format_ready = 1;
+    }
     else if (depth && PyNumber_Check(depth)) { /* use default masks */
         if (!pg_IntFromObj(depth, &bpp)) {
             PyErr_SetString(PyExc_ValueError,
@@ -824,10 +853,15 @@ surface_init(pgSurfaceObject *self, PyObject *args, PyObject *kwds)
         }
     }
 
-    Uint32 pxformat =
-        SDL_MasksToPixelFormatEnum(bpp, Rmask, Gmask, Bmask, Amask);
+    Uint32 pxformat = SDL_PIXELFORMAT_UNKNOWN;
+    if (format_ready) {
+        pxformat = ready_format;
+    }
+    else {
+        pxformat = SDL_MasksToPixelFormatEnum(bpp, Rmask, Gmask, Bmask, Amask);
+    }
     if (pxformat == SDL_PIXELFORMAT_UNKNOWN) {
-        PyErr_SetString(PyExc_ValueError, "Invalid mask values");
+        PyErr_SetString(PyExc_ValueError, "Invalid mask or format values");
         return -1;
     }
 
@@ -1683,6 +1717,28 @@ surf_convert(pgSurfaceObject *self, PyObject *args)
             src = pgSurface_AsSurface(argobject);
             newsurf = PG_ConvertSurface(surf, src->format);
         }
+        else if (PyObject_HasAttrString(argobject,
+                                        "format")) { /* may be a PixelFormat or
+                                                        compatible object */
+            PyObject *format_obj = PyObject_GetAttrString(argobject, "format");
+            if (!format_obj) {
+                return NULL;
+            }
+            SDL_PixelFormatEnum format_enum =
+                PyLong_AsUnsignedLong(format_obj);
+            if (PyErr_Occurred()) {
+                return NULL;
+            }
+            if (format_enum == SDL_PIXELFORMAT_UNKNOWN) {
+                return RAISE(PyExc_ValueError,
+                             "Cannot convert to an unknown format");
+            }
+            PG_PixelFormat *format = SDL_GetPixelFormatDetails(format_enum);
+            if (!format) {
+                return RAISE(pgExc_SDLError, SDL_GetError());
+            }
+            newsurf = PG_ConvertSurface(surf, format);
+        }
         else {
             /* will be updated later, initialize to make static analyzer happy
              */
@@ -1836,6 +1892,29 @@ surf_convert(pgSurfaceObject *self, PyObject *args)
         if (pgSurface_Check(argobject)) {
             src = pgSurface_AsSurface(argobject);
             newsurf = PG_ConvertSurface(surf, src->format);
+        }
+        else if (PyObject_HasAttrString(
+                     argobject,
+                     "format")) { /* may be a PixelFormat or compatible */
+            PyObject *format_obj = PyObject_GetAttrString(argobject, "format");
+            if (!format_obj) {
+                return NULL;
+            }
+            SDL_PixelFormatEnum format_enum =
+                PyLong_AsUnsignedLong(format_obj);
+            if (PyErr_Occurred()) {
+                return NULL;
+            }
+            if (format_enum == SDL_PIXELFORMAT_UNKNOWN) {
+                return RAISE(PyExc_ValueError,
+                             "Cannot convert to an unknown format");
+            }
+            SDL_PixelFormat *format = SDL_AllocFormat(format_enum);
+            if (!format) {
+                return RAISE(pgExc_SDLError, SDL_GetError());
+            }
+            newsurf = PG_ConvertSurface(surf, format);
+            SDL_FreeFormat(format);
         }
         else {
             /* will be updated later, initialize to make static analyzer happy
@@ -3175,6 +3254,21 @@ surf_get_losses(PyObject *self, PyObject *_null)
     return Py_BuildValue("(iiii)", PG_FORMAT_R_LOSS(format),
                          PG_FORMAT_G_LOSS(format), PG_FORMAT_B_LOSS(format),
                          PG_FORMAT_A_LOSS(format));
+}
+
+static PyObject *
+surf_get_format(PyObject *self, PyObject *_null)
+{
+    SDL_Surface *surf = pgSurface_AsSurface(self);
+    SURF_INIT_CHECK(surf)
+
+    PG_PixelFormat *format = PG_GetSurfaceFormat(surf);
+    if (format == NULL) {
+        return RAISE(pgExc_SDLError, SDL_GetError());
+    }
+
+    return surface_get_pixel_format(NULL, Py_BuildValue("(i)", format->format),
+                                    NULL);
 }
 
 static PyObject *
@@ -4594,7 +4688,349 @@ pgSurface_Blit(pgSurfaceObject *dstobj, pgSurfaceObject *srcobj,
     return result != 0;
 }
 
-static PyMethodDef _surface_methods[] = {{NULL, NULL, 0, NULL}};
+static PyObject *PixelFormat_class = NULL;
+
+static PG_PixelFormatEnum
+_string_to_format(const char *name, int *result)
+{
+    *result = 0;
+    // 32 aliases
+    if (!strcmp(name, "xrgb32")) {
+        return SDL_PIXELFORMAT_XRGB32;
+    }
+    if (!strcmp(name, "xbgr32")) {
+        return SDL_PIXELFORMAT_XBGR32;
+    }
+    if (!strcmp(name, "rgbx32")) {
+        return SDL_PIXELFORMAT_RGBX32;
+    }
+    if (!strcmp(name, "bgrx32")) {
+        return SDL_PIXELFORMAT_BGRX32;
+    }
+    if (!strcmp(name, "argb32")) {
+        return SDL_PIXELFORMAT_ARGB32;
+    }
+    if (!strcmp(name, "bgra32")) {
+        return SDL_PIXELFORMAT_BGRA32;
+    }
+    if (!strcmp(name, "abgr32")) {
+        return SDL_PIXELFORMAT_ABGR32;
+    }
+    if (!strcmp(name, "rgba32")) {
+        return SDL_PIXELFORMAT_RGBA32;
+    }
+    // 8888
+    if (!strcmp(name, "xrgb8888")) {
+        return SDL_PIXELFORMAT_XRGB8888;
+    }
+    if (!strcmp(name, "xbgr8888")) {
+        return SDL_PIXELFORMAT_XBGR8888;
+    }
+    if (!strcmp(name, "rgbx8888")) {
+        return SDL_PIXELFORMAT_RGBX8888;
+    }
+    if (!strcmp(name, "bgrx8888")) {
+        return SDL_PIXELFORMAT_BGRX8888;
+    }
+    if (!strcmp(name, "argb8888")) {
+        return SDL_PIXELFORMAT_ARGB8888;
+    }
+    if (!strcmp(name, "bgra8888")) {
+        return SDL_PIXELFORMAT_BGRA8888;
+    }
+    if (!strcmp(name, "abgr8888")) {
+        return SDL_PIXELFORMAT_ABGR8888;
+    }
+    if (!strcmp(name, "rgba8888")) {
+        return SDL_PIXELFORMAT_RGBA8888;
+    }
+    // INDEXED (other indexed formats are not supported by surfaces)
+    if (!strcmp(name, "index8")) {
+        return SDL_PIXELFORMAT_INDEX8;
+    }
+    // 4444
+    if (!strcmp(name, "xrgb4444")) {
+        return SDL_PIXELFORMAT_XRGB4444;
+    }
+    if (!strcmp(name, "xbgr4444")) {
+        return SDL_PIXELFORMAT_XBGR4444;
+    }
+    if (!strcmp(name, "argb4444")) {
+        return SDL_PIXELFORMAT_ARGB4444;
+    }
+    if (!strcmp(name, "bgra4444")) {
+        return SDL_PIXELFORMAT_BGRA4444;
+    }
+    if (!strcmp(name, "abgr4444")) {
+        return SDL_PIXELFORMAT_ABGR4444;
+    }
+    if (!strcmp(name, "rgba4444")) {
+        return SDL_PIXELFORMAT_RGBA4444;
+    }
+    // 1555/5551
+    if (!strcmp(name, "xrgb1555")) {
+        return SDL_PIXELFORMAT_XRGB1555;
+    }
+    if (!strcmp(name, "xbgr1555")) {
+        return SDL_PIXELFORMAT_XBGR1555;
+    }
+    if (!strcmp(name, "argb1555")) {
+        return SDL_PIXELFORMAT_ARGB1555;
+    }
+    if (!strcmp(name, "bgra5551")) {
+        return SDL_PIXELFORMAT_BGRA5551;
+    }
+    if (!strcmp(name, "abgr1555")) {
+        return SDL_PIXELFORMAT_ABGR1555;
+    }
+    if (!strcmp(name, "rgba5551")) {
+        return SDL_PIXELFORMAT_RGBA5551;
+    }
+    // 3 component
+    if (!strcmp(name, "rgb332")) {
+        return SDL_PIXELFORMAT_RGB332;
+    }
+    if (!strcmp(name, "rgb24")) {
+        return SDL_PIXELFORMAT_RGB24;
+    }
+    if (!strcmp(name, "bgr24")) {
+        return SDL_PIXELFORMAT_BGR24;
+    }
+    if (!strcmp(name, "rgb565")) {
+        return SDL_PIXELFORMAT_RGB565;
+    }
+    if (!strcmp(name, "bgr565")) {
+        return SDL_PIXELFORMAT_BGR565;
+    }
+    // HDR
+    if (!strcmp(name, "argb2101010")) {
+        return SDL_PIXELFORMAT_ARGB2101010;
+    }
+    // UNKNOWN
+    if (!strcmp(name, "unknown")) {
+        return SDL_PIXELFORMAT_UNKNOWN;
+    }
+#ifdef PG_SDL3
+    // HDR
+    if (!strcmp(name, "xrgb2101010")) {
+        return SDL_PIXELFORMAT_XRGB2101010;
+    }
+    if (!strcmp(name, "xbgr2101010")) {
+        return SDL_PIXELFORMAT_XBGR2101010;
+    }
+    if (!strcmp(name, "abgr2101010")) {
+        return SDL_PIXELFORMAT_ABGR2101010;
+    }
+    // unusual
+    if (!strcmp(name, "rgb48")) {
+        return SDL_PIXELFORMAT_RGB48;
+    }
+    if (!strcmp(name, "bgr48")) {
+        return SDL_PIXELFORMAT_BGR48;
+    }
+    if (!strcmp(name, "rgba64")) {
+        return SDL_PIXELFORMAT_RGBA64;
+    }
+    if (!strcmp(name, "argb64")) {
+        return SDL_PIXELFORMAT_ARGB64;
+    }
+    if (!strcmp(name, "bgra64")) {
+        return SDL_PIXELFORMAT_BGRA64;
+    }
+    if (!strcmp(name, "abgr64")) {
+        return SDL_PIXELFORMAT_ABGR64;
+    }
+#endif
+    *result = -1;
+    return SDL_PIXELFORMAT_UNKNOWN;
+}
+
+static PyObject *
+surface_get_pixel_format(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+    if (!PixelFormat_class) {
+        return RAISE(PyExc_SystemError, "PixelFormat class was not imported.");
+    }
+
+    PyObject *format_obj;
+    PyObject *depth_obj = NULL;
+    PyObject *PixelFormat_args, *PixelFormat_kwargs, *masks_args, *shifts_args,
+        *name_obj, *new_name_obj;
+    PG_PixelFormatEnum format = SDL_PIXELFORMAT_UNKNOWN;
+    PG_PixelFormat *format_details;
+    const char *format_name;
+
+    char *keywords[] = {"format", "depth", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|O", keywords,
+                                     &format_obj, &depth_obj)) {
+        return NULL;
+    }
+
+    if (PyLong_Check(format_obj)) { /* already a format enum */
+        if (depth_obj) {
+            return RAISE(PyExc_TypeError,
+                         "Depth argument can only be used when providing "
+                         "masks for the format");
+        }
+        format = PyLong_AsLong(format_obj);
+        if (format == -1 && PyErr_Occurred()) { /* disambiguate */
+            return NULL;
+        }
+    }
+    else if (PyUnicode_Check(format_obj)) { /* readable format name */
+        if (depth_obj) {
+            return RAISE(PyExc_TypeError,
+                         "Depth argument can only be used when providing "
+                         "masks for the format");
+        }
+        PyObject *lowered_format_obj =
+            PyObject_CallMethod(format_obj, "lower", NULL);
+        if (!lowered_format_obj) {
+            return NULL;
+        }
+        const char *format_name = PyUnicode_AsUTF8(lowered_format_obj);
+        Py_DECREF(lowered_format_obj);
+        if (!format_name) {
+            return NULL;
+        }
+        int result;
+        format = _string_to_format(format_name, &result);
+        if (result < 0) {
+            if (PyErr_WarnEx(
+                    PyExc_Warning,
+                    "Format is unknown because the name was not recognized",
+                    1) != 0) {
+                return NULL;
+            }
+        }
+    }
+    else if (PySequence_Check(format_obj)) { /* might be masks */
+        if (!depth_obj || !PyLong_Check(depth_obj)) {
+            return RAISE(PyExc_TypeError,
+                         "Masks require a bit depth to be provided to make a "
+                         "pixel format");
+        }
+        int depth = PyLong_AsLong(depth_obj);
+        if (depth == -1 && PyErr_Occurred()) { /* disambiguate */
+            return NULL;
+        }
+
+        Py_ssize_t seq_size = PySequence_Size(format_obj);
+        if (seq_size != 4) {
+            return RAISE(PyExc_ValueError,
+                         "Masks must be a sequence of four valid integers to "
+                         "be interpreted as a format");
+        }
+        // we know it's a sequence, safe to call
+        PyObject *Rmask_obj = PySequence_ITEM(format_obj, 0);
+        PyObject *Gmask_obj = PySequence_ITEM(format_obj, 1);
+        PyObject *Bmask_obj = PySequence_ITEM(format_obj, 2);
+        PyObject *Amask_obj = PySequence_ITEM(format_obj, 3);
+        if (!Rmask_obj || !Gmask_obj || !Bmask_obj || !Amask_obj) {
+            Py_XDECREF(Rmask_obj);
+            Py_XDECREF(Gmask_obj);
+            Py_XDECREF(Bmask_obj);
+            Py_XDECREF(Amask_obj);
+            return NULL;
+        }
+        if (!PyLong_Check(Rmask_obj) || !PyLong_Check(Gmask_obj) ||
+            !PyLong_Check(Bmask_obj) || !PyLong_Check(Amask_obj)) {
+            Py_DECREF(Rmask_obj);
+            Py_DECREF(Gmask_obj);
+            Py_DECREF(Bmask_obj);
+            Py_DECREF(Amask_obj);
+            return RAISE(PyExc_ValueError,
+                         "Masks must be a sequence of four valid integers to "
+                         "be interpreted as a format");
+        }
+
+        Uint32 Rmask, Gmask, Bmask, Amask;
+        int r_res = PyLong_AsUInt32(Rmask_obj, &Rmask);
+        int g_res = PyLong_AsUInt32(Gmask_obj, &Gmask);
+        int b_res = PyLong_AsUInt32(Bmask_obj, &Bmask);
+        int a_res = PyLong_AsUInt32(Amask_obj, &Amask);
+        Py_DECREF(Rmask_obj);
+        Py_DECREF(Gmask_obj);
+        Py_DECREF(Bmask_obj);
+        Py_DECREF(Amask_obj);
+        if (r_res == -1 || g_res == -1 || b_res == -1 || a_res == -1) {
+            return NULL;
+        }
+
+        /* format will be SDL_PIXELFORMAT_UNKNOWN if the arguments are wrong,
+         * but that's an allowed format kind */
+#ifdef PG_SDL3
+        format = SDL_GetPixelFormatForMasks(depth, Rmask, Gmask, Bmask, Amask);
+#else
+        format = SDL_MasksToPixelFormatEnum(depth, Rmask, Gmask, Bmask, Amask);
+#endif
+    }
+#ifdef PG_SDL3
+    format_details = SDL_GetPixelFormatDetails(format);
+#else
+    format_details = SDL_AllocFormat(format);
+#endif
+    if (!format_details) {
+        return RAISE(pgExc_SDLError, SDL_GetError());
+    }
+
+    format_name = SDL_GetPixelFormatName(format);
+    name_obj = PyUnicode_FromString(format_name);
+    if (!name_obj) {
+        return NULL;
+    }
+    new_name_obj =
+        PyObject_CallMethod(name_obj, "removeprefix", "s", "SDL_PIXELFORMAT_");
+    Py_DECREF(name_obj);
+    if (!name_obj) {
+        return NULL;
+    }
+
+    PixelFormat_args = Py_BuildValue("()");
+    if (!PixelFormat_args) {
+        return NULL;
+    }
+
+    masks_args =
+        Py_BuildValue("(IIII)", format_details->Rmask, format_details->Gmask,
+                      format_details->Bmask, format_details->Amask);
+    if (!masks_args) {
+        return NULL;
+    }
+
+    shifts_args =
+        Py_BuildValue("(IIII)", format_details->Rshift, format_details->Gshift,
+                      format_details->Bshift, format_details->Ashift);
+    if (!shifts_args) {
+        return NULL;
+    }
+
+    // clang-format off
+    PixelFormat_kwargs = Py_BuildValue(
+        "{s:i,s:N,s:i,s:i,s:N,s:N,s:N}", // s: str, i: int, N: already a PyObject (no new reference)
+        "format", format,
+        "name", new_name_obj,
+        "bitsize", PG_FORMAT_BitsPerPixel(format_details),
+        "bytesize", PG_FORMAT_BytesPerPixel(format_details),
+        "masks", masks_args,
+        "shifts", shifts_args,
+        "alpha", PyBool_FromLong(SDL_ISPIXELFORMAT_ALPHA(format))
+    );
+    // clang-format on
+    if (!PixelFormat_kwargs) {
+        return NULL;
+    }
+
+    return PyObject_Call(
+        PixelFormat_class, PixelFormat_args,
+        PixelFormat_kwargs); /* any error propagates correctly */
+}
+
+static PyMethodDef _surface_methods[] = {
+    {"get_pixel_format", (PyCFunction)surface_get_pixel_format,
+     METH_VARARGS | METH_KEYWORDS, DOC_SURFACE_GETPIXELFORMAT},
+    {NULL, NULL, 0, NULL}};
 
 MODINIT_DEFINE(surface)
 {
@@ -4635,6 +5071,19 @@ MODINIT_DEFINE(surface)
         return NULL;
     }
 
+    PyObject *data_classes_module =
+        PyImport_ImportModule("pygame._data_classes");
+    if (!data_classes_module) {
+        return NULL;
+    }
+
+    PixelFormat_class =
+        PyObject_GetAttrString(data_classes_module, "PixelFormat");
+    if (!PixelFormat_class) {
+        return NULL;
+    }
+    Py_DECREF(data_classes_module);
+
     /* type preparation */
     if (PyType_Ready(&pgSurface_Type) < 0) {
         return NULL;
@@ -4657,6 +5106,12 @@ MODINIT_DEFINE(surface)
 
     if (PyModule_AddObjectRef(module, "Surface",
                               (PyObject *)&pgSurface_Type)) {
+        Py_DECREF(module);
+        return NULL;
+    }
+
+    if (PyModule_AddObject(module, "PixelFormat", PixelFormat_class)) {
+        Py_DECREF(PixelFormat_class);
         Py_DECREF(module);
         return NULL;
     }

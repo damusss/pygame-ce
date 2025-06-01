@@ -3,8 +3,11 @@
 :mod:`pygame.Surface`
 =====================
 
-.. currentmodule:: pygame
-
-.. autopgclass:: Surface
+.. autopgclass:: pygame.Surface
    :members:
    :private-members: +_pixels_address
+
+pygame.surface.get_pixel_format
+===============================
+
+.. autopgfunction:: pygame.surface.get_pixel_format

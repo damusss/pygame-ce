@@ -1,6 +1,7 @@
 from collections.abc import Iterable
-from typing import Any, Literal, Optional, Union, overload
+from typing import Any, Literal, Optional, Protocol, Union, overload
 
+from pygame._data_classes import PixelFormat
 from pygame.bufferproxy import BufferProxy
 from pygame.color import Color
 from pygame.rect import FRect, Rect
@@ -39,6 +40,48 @@ _ViewKind = Literal[
     b"A",
 ]
 
+_FormatName = Literal[
+    "INDEX8",
+    "RGB332",
+    "RGB24",
+    "BGR24",
+    "RGB565",
+    "BGR565",
+    "XRGB4444",
+    "XBGR4444",
+    "ARGB4444",
+    "BGRA4444",
+    "ABGR4444",
+    "RGBA4444",
+    "XRGB1555",
+    "XBGR1555",
+    "ARGB1555",
+    "BGRA5551",
+    "ABGR1555",
+    "RGBA5551",
+    "XRGB8888",
+    "XBGR8888",
+    "RGBX8888",
+    "BGRX8888",
+    "ARGB8888",
+    "BGRA8888",
+    "ABGR8888",
+    "RGBA8888",
+    "XRGB32",
+    "XBGR32",
+    "RGBX32",
+    "BGRX32",
+    "ARGB32",
+    "BGRA32",
+    "ABGR32",
+    "RGBA32",
+    "ARGB2101010",
+    "UNKNOWN",
+]
+
+class _HasFormatAttribute(Protocol):
+    format: int
+
 class Surface:
     """Pygame object for representing images.
 
@@ -51,8 +94,15 @@ class Surface:
     additional arguments, the Surface will be created in a format that best
     matches the display Surface.
 
-    The pixel format can be controlled by passing the bit depth or an existing
-    Surface. The flags argument is a bitmask of additional features for the
+    There are multiple ways to control the pixel format by using the parameters
+    after ``flags``:
+       * Passing the bit depth and optionally the masks describing the color channel layout.
+       * Passing an existing surface (the same format will be used).
+       * Passing an instance of an object with a ``format`` int attribute which value             is used as the format (for example a ``PixelFormat`` instance returned
+         by :mod:`pygame.surface.get_pixel_format`). If that value is 0 (meaning
+         an unknown format) a ``ValueError`` is raised.
+
+    The flags argument is a bitmask of additional features for the
     surface. You can pass any combination of these flags:
 
     ::
@@ -117,6 +167,9 @@ class Surface:
     Each Surface contains a clipping area. By default the clip area covers the
     entire Surface. If it is changed, all drawing operations will only effect
     the smaller area.
+
+    .. versionchanged:: 2.5.5 A PixelFormat or compatible instance can now
+        be provided as the target format.
     """
 
     @overload
@@ -133,6 +186,13 @@ class Surface:
         size: Point,
         flags: int = 0,
         surface: Surface = ...,
+    ) -> None: ...
+    @overload
+    def __init__(
+        self,
+        size: Point,
+        flags: int = 0,
+        format: Optional[_HasFormatAttribute] = ...,
     ) -> None: ...
     def __copy__(self) -> Surface: ...
     def __deepcopy__(self, memo) -> Surface: ...
@@ -285,6 +345,8 @@ class Surface:
     @overload
     def convert(self, surface: Surface, /) -> Surface: ...
     @overload
+    def convert(self, format: _HasFormatAttribute, /) -> Surface: ...
+    @overload
     def convert(self, depth: int, flags: int = 0, /) -> Surface: ...
     @overload
     def convert(self, masks: ColorLike, flags: int = 0, /) -> Surface: ...
@@ -294,18 +356,24 @@ class Surface:
         """Change the pixel format of a surface.
 
         Creates a new copy of the Surface with the pixel format changed. The new
-        pixel format can be determined from another existing Surface. Otherwise
-        depth, flags, and masks arguments can be used, similar to the
-        :meth:`pygame.Surface()` call.
+        pixel format is determined in different ways, similar to how it works
+        for the :class:`pygame.Surface` constructor:
+           * Passing an existing surface (the same format is used).
+           * Passing the bit depth and flags for the new surface.
+           * Passing the masks and flags describing the pixel layout of the new surface.
+           * Passing an instance of an object with a ``format`` int attribute which value
+             is used as the format (for example a ``PixelFormat`` instance returned
+             by :mod:`pygame.surface.get_pixel_format`). If that value is 0 (meaning
+             an unknown format) a ``ValueError`` is raised.
 
         If no arguments are passed the new Surface will have the same pixel
         format as the display Surface. This is always the fastest format for
         blitting. It is a good idea to convert all Surfaces before they are
         blitted many times.
 
-        The converted Surface will have no pixel alphas. They will be stripped if
-        the original had them. See :meth:`convert_alpha()` for preserving or
-        creating per-pixel alphas.
+        If no argument is provided the converted Surface will have no pixel alphas.
+        They will be stripped if the original had them. See :meth:`convert_alpha()`
+        for preserving or creating per-pixel alphas.
 
         The new copy will have the same class as the copied surface. This lets
         a Surface subclass inherit this method without the need to override,
@@ -313,6 +381,9 @@ class Surface:
 
         .. versionchanged:: 2.5.0 converting to a known format will succeed without
             a window/display surface.
+
+        .. versionchanged:: 2.5.5 A PixelFormat or compatible instance can now
+            be provided as the target format.
         """
 
     def convert_alpha(self) -> Surface:
@@ -776,18 +847,41 @@ class Surface:
         ..versionadded:: 2.3.0
         """
 
+    def get_format(self) -> PixelFormat:
+        """Get a PixelFormat instance populated with the Surface format information.
+
+        Returns a ``PixelFormat`` dataclass instance populated with the Surface format.
+        The format describes how much memory is needed for a pixel, the presence
+        of an alpha channel and how the pixel's channels are layed out in memory.
+
+        The format is immutable so modifying any attribute of it won't modify the Surface
+        in any way. Use :meth:`Surface.convert` or :meth:`Surface.convert_alpha` to have
+        a copy of the Surface with a different format.
+
+        See :mod:`pygame.surface.get_pixel_format` for a detailed breakdown of the
+        returned object.
+
+        .. versionadded:: 2.5.5
+        """
+
+    @deprecated("since 2.5.5. Use Surface.get_format().bitsize instead")
     def get_bitsize(self) -> int:
         """Get the bit depth of the Surface pixel format.
 
         Returns the number of bits used to represent each pixel. This value may
         not exactly fill the number of bytes used per pixel. For example a 15 bit
         Surface still requires a full 2 bytes.
+
+        .. deprecated:: 2.5.5 Use Surface.get_format().bitsize instead
         """
 
+    @deprecated("since 2.5.5. Use Surface.get_format().bytesize instead")
     def get_bytesize(self) -> int:
         """Get the bytes used per Surface pixel.
 
         Return the number of bytes used per pixel.
+
+        .. deprecated:: 2.5.5 Use Surface.get_format().bytesize instead
         """
 
     def get_flags(self) -> int:
@@ -831,12 +925,15 @@ class Surface:
         This value is not needed for normal pygame usage.
         """
 
+    @deprecated("since 2.5.5. Use Surface.get_format().masks instead")
     def get_masks(self) -> tuple[int, int, int, int]:
         """The bitmasks needed to convert between a color and a mapped integer.
 
         Returns the bitmasks used to isolate each color in a mapped integer.
 
         This value is not needed for normal pygame usage.
+
+        .. deprecated:: 2.5.5 Use Surface.get_format().masks instead
         """
 
     @deprecated("since 2.0.0. Immutable in SDL2")
@@ -853,6 +950,7 @@ class Surface:
         .. versionaddedold:: 1.8.1
         """
 
+    @deprecated("since 2.5.5. Use Surface.get_format().shifts instead")
     def get_shifts(self) -> tuple[int, int, int, int]:
         """The bit shifts needed to convert between a color and a mapped integer.
 
@@ -860,6 +958,8 @@ class Surface:
         integer.
 
         This value is not needed for normal pygame usage.
+
+        .. deprecated:: 2.5.5 Use Surface.get_format().shifts instead
         """
 
     @deprecated("since 2.0.0. Immutable in SDL2")
@@ -1052,3 +1152,90 @@ class Surface:
 
 @deprecated("Use `Surface` instead (SurfaceType is an old alias)")
 class SurfaceType(Surface): ...
+
+@overload
+def get_pixel_format(format: int | _FormatName) -> PixelFormat: ...
+@overload
+def get_pixel_format(masks: tuple[int, int, int, int], depth: int) -> PixelFormat: ...
+def get_pixel_format(*args):  # type-ignore
+    """Get a PixelFormat instance describing the pixel format for a Surface
+
+    If the argument is an integer it is used as the SDL format identifier. Since that is not
+    intuitive, the format can be made from a string containing its name (case insensitive).
+    A list of recognized format names can be found below. If the name is not recognized a
+    warning will be emitted. Formats such as ``XXXX32`` are aliases of the corresponding
+    ``XXXX8888`` format for the current platform.
+
+    Another way to make a format is by providing a sequence of 4 integers representing the
+    format's masks and the bit depth of the format.
+
+    If the format identifier or its name are not recognized or if the format cannot be inferred
+    from the masks and bit depth then it will be unknown. An unknown format is considered
+    valid but cannot be used with surfaces.
+
+    The returned object is an instance of the ``PixelFormat`` dataclass. Modifying any attributes
+    won't have any effect and is not advised. The information available is the following:
+
+       * ``format``: The format identifier with 0 meaning unknown.
+       * ``name``: A human readable uppercase representation of the format (for example ``"RGBA4444"``).
+         If the format was created with a ``XXXX32`` alias, this value will differ and retain the
+         original ``XXXX8888`` name. An unknown format will have the name ``"UNKNOWN"``.
+       * ``bitsize``: How many bits contain the pixel data. This doesn't always represent the
+         memory needed for a pixel (for example a 15 bit pixel can still occupy 2 full bytes).
+       * ``bytesize``: How many bytes in memory the pixel requires/occupies.
+       * ``masks``: A tuple containing the bitmasks needed to isolate the R, G, B, A channels
+         from a mapped integer.
+       * ``shifts``: A tuple containing the shifts required to isolate the R, G, B, A channels
+         from a mapped integer.
+       * ``alpha``: A boolean flag specifying if the format contains an alpha channel. 32-bits
+         formats don't always have an alpha channel.
+
+    The recognized format names are the following:
+
+       * ``UNKNOWN``: Nothing about the format is known, doesn't represent any pixel.
+
+       * ``INDEX8``: 8-bit pixel that only stores the index to a palette of colors.
+
+       * ``RGB332``: Compact and low quality 8-bit pixel storing 3 bits for red and
+         green, 2 bits for blue and no alpha channel.
+       * ``RGB24``: 24-bit pixel with 8 bits per channel and no alpha channel.
+       * ``BGR24``: RGB24 with swapped red and blue channels.
+
+       * ``RGB565``: 16-bit pixel storing 5 bits for red and blue, 6 bits for green
+         and no alpha channel.
+       * ``BGR565``: RGB565 with swapped red and blue channels.
+
+       * ``XRGB4444``: 16-bit pixel storing 4 bits for each channel. The X channel
+         is unused (no alpha channel).
+       * ``XBGR4444``: XRGB4444 with swapped red and blue channels.
+       * ``ARGB4444``: 16-bit pixel storing 4 bits for each channel with an alpha channel.
+       * ``ABGR4444``: ARGB4444 with swapped red and blue channels.
+       * ``RGBA4444`` / ``BGRA4444``: ARGB4444 and AGBR4444 but the alpha channel comes last.
+
+       * ``XRGB1555``: 16-bit pixel storing 5 bits for the R, G and B channels and 1 bit
+         of unused space.
+       * ``XBGR1555``: XRGB1555 with swapped red and blue channels.
+       * ``ARGB1555``: 16-bit pixel storing 5 bits for the R, G and B channels and 1 bit
+         for the alpha channel (meaning on/off).
+       * ``ABGR1555``: ARGB1555 with swapped red and blue channels.
+       * ``RGBA5551`` / ``BGRA5551``: ARGB1555 and ABGR1555 but the alpha channel comes last.
+
+       * ``XRGB8888``: 32-bit pixel storing 8 bits for each channel. The X channel is
+         unused (no alpha channel).
+       * ``XBGR8888``: XRGB8888 with swapped red and blue channels.
+       * ``RGBX8888`` / ``BGRX8888``: XRGB8888 and XBGR8888 but the unused channel comes last.
+
+       * ``ARGB8888``: 32-bit pixel storing 8 bits for each channel and with an alpha channel.
+       * ``ABGR8888``: ARGB8888 with swapped red and blue channels.
+       * ``RGBA8888`` / ``BGRA8888``: ARGB8888 and ABGR8888 but the alpha channel comes last
+
+       * ``XRGB32`` / ``XBGR32`` / ``RGBX32`` / ``BGRX32``: 32-bit alias of the corresponding
+         8+8+8+8 pixel format for the current platform.
+       * ``ARGB32`` / ``ABGR32`` / ``RGBA32`` / ``BGRA32``: 32-bit alias of the corresponding
+         8+8+8+8 pixel format (with an alpha channel) for the current platform.
+
+       * ``ARGB2101010``: 32-bit pixel supporting HDR (high dynamic range) colors. Stores
+         10 bits for the R, G and B channels and 2 bits for the alpha channel.
+
+    .. versionadded:: 2.5.5
+    """
