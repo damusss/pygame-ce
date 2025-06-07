@@ -91,7 +91,7 @@ image_load_basic(PyObject *self, PyObject *obj)
     Py_END_ALLOW_THREADS;
 
     if (surf == NULL) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     final = (PyObject *)pgSurface_New(surf);
@@ -236,7 +236,7 @@ image_save(PyObject *self, PyObject *arg, PyObject *kwarg)
     }
     if (result == -1) {
         /* SDL error: translate to Python error */
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
     if (result == 1) {
         /* Should never get here */
@@ -555,7 +555,7 @@ image_tobytes(PyObject *self, PyObject *arg, PyObject *kwarg)
     const SDL_PixelFormatDetails *format_details =
         SDL_GetPixelFormatDetails(surf->format);
     if (!format_details) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
     SDL_Palette *surf_palette = SDL_GetSurfacePalette(surf);
     Rloss = format_details->Rbits;
@@ -1200,7 +1200,7 @@ image_frombytes(PyObject *self, PyObject *arg, PyObject *kwds)
 
         surf = PG_CreateSurface(w, h, SDL_PIXELFORMAT_INDEX8);
         if (!surf) {
-            return RAISE(pgExc_SDLError, SDL_GetError());
+            return RAISE_SDL_ERROR;
         }
         SDL_LockSurface(surf);
         for (looph = 0; looph < h; ++looph) {
@@ -1231,7 +1231,7 @@ image_frombytes(PyObject *self, PyObject *arg, PyObject *kwds)
         surf = PG_CreateSurface(w, h, SDL_PIXELFORMAT_RGB24);
 #endif
         if (!surf) {
-            return RAISE(pgExc_SDLError, SDL_GetError());
+            return RAISE_SDL_ERROR;
         }
         SDL_LockSurface(surf);
         for (looph = 0; looph < h; ++looph) {
@@ -1275,7 +1275,7 @@ image_frombytes(PyObject *self, PyObject *arg, PyObject *kwds)
             w, h,
             (alphamult ? SDL_PIXELFORMAT_RGBA32 : PG_PIXELFORMAT_RGBX32));
         if (!surf) {
-            return RAISE(pgExc_SDLError, SDL_GetError());
+            return RAISE_SDL_ERROR;
         }
         SDL_LockSurface(surf);
         for (looph = 0; looph < h; ++looph) {
@@ -1303,7 +1303,7 @@ image_frombytes(PyObject *self, PyObject *arg, PyObject *kwds)
         }
         surf = PG_CreateSurface(w, h, SDL_PIXELFORMAT_BGRA32);
         if (!surf) {
-            return RAISE(pgExc_SDLError, SDL_GetError());
+            return RAISE_SDL_ERROR;
         }
         SDL_LockSurface(surf);
         for (looph = 0; looph < h; ++looph) {
@@ -1331,7 +1331,7 @@ image_frombytes(PyObject *self, PyObject *arg, PyObject *kwds)
         }
         surf = PG_CreateSurface(w, h, SDL_PIXELFORMAT_ARGB32);
         if (!surf) {
-            return RAISE(pgExc_SDLError, SDL_GetError());
+            return RAISE_SDL_ERROR;
         }
         SDL_LockSurface(surf);
         for (looph = 0; looph < h; ++looph) {
@@ -1359,7 +1359,7 @@ image_frombytes(PyObject *self, PyObject *arg, PyObject *kwds)
         }
         surf = PG_CreateSurface(w, h, SDL_PIXELFORMAT_ABGR32);
         if (!surf) {
-            return RAISE(pgExc_SDLError, SDL_GetError());
+            return RAISE_SDL_ERROR;
         }
         SDL_LockSurface(surf);
         for (looph = 0; looph < h; ++looph) {
@@ -1572,7 +1572,7 @@ image_frombuffer(PyObject *self, PyObject *arg, PyObject *kwds)
     }
 
     if (!surf) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
     surfobj = (pgSurfaceObject *)pgSurface_New(surf);
     Py_INCREF(buffer);

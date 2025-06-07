@@ -367,7 +367,7 @@ image_save_ext(PyObject *self, PyObject *arg, PyObject *kwarg)
     }
     if (result == -1) {
         /* SDL error: translate to Python error */
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
     if (result == 1) {
         return RAISE(pgExc_SDLError, "Unrecognized image type");

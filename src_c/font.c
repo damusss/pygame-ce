@@ -141,7 +141,7 @@ fontmodule_init(PyObject *self, PyObject *_null)
         if (TTF_Init())
 #endif
         {
-            return RAISE(pgExc_SDLError, SDL_GetError());
+            return RAISE_SDL_ERROR;
         }
         font_initialized = 1;
     }
@@ -890,7 +890,7 @@ font_set_ptsize(PyObject *self, PyObject *arg)
     if (TTF_SetFontSize(font, val) == -1)
 #endif
     {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
     ((PyFontObject *)self)->ptsize = val;
 
@@ -1059,7 +1059,7 @@ font_set_script(PyObject *self, PyObject *arg)
     if (TTF_SetFontScriptName(font, script_code) < 0)
 #endif
     {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 #else
     return RAISE(pgExc_SDLError,
@@ -1142,7 +1142,7 @@ font_set_direction(PyObject *self, PyObject *arg, PyObject *kwarg)
     if (TTF_SetFontDirection(font, dir))
 #endif
     {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
 #else

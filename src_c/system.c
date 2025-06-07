@@ -76,7 +76,7 @@ pg_system_get_pref_path(PyObject *self, PyObject *args, PyObject *kwargs)
 
     char *path = SDL_GetPrefPath(org, project);
     if (path == NULL) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     PyObject *ret = PyUnicode_FromString(path);

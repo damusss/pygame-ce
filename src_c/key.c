@@ -539,7 +539,7 @@ key_start_text_input(PyObject *self, PyObject *_null)
                      "display.set_mode has not been called yet.");
     }
     if (!SDL_StartTextInput(win)) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 #else
     /* https://wiki.libsdl.org/SDL_StartTextInput */
@@ -560,7 +560,7 @@ key_stop_text_input(PyObject *self, PyObject *_null)
                      "display.set_mode has not been called yet.");
     }
     if (!SDL_StopTextInput(win)) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 #else
     /* https://wiki.libsdl.org/SDL_StopTextInput */

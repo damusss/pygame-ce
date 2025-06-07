@@ -331,7 +331,7 @@ mouse_get_visible(PyObject *self, PyObject *_null)
 #endif
 
     if (0 > result) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     return PyBool_FromLong(result);
@@ -431,7 +431,7 @@ _set_bitmap_cursor(int w, int h, int spotx, int spoty, PyObject *xormask,
     anddata = NULL;
 
     if (!cursor) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     lastcursor = SDL_GetCursor();
@@ -499,7 +499,7 @@ _set_color_cursor(int spotx, int spoty, pgSurfaceObject *surfobj)
 
     cursor = SDL_CreateColorCursor(surf, spotx, spoty);
     if (!cursor) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     lastcursor = SDL_GetCursor();
@@ -625,11 +625,11 @@ mouse_set_relative_mode(PyObject *self, PyObject *arg)
                      "display.set_mode has not been called yet.");
     }
     if (!SDL_SetWindowRelativeMouseMode(win, (bool)mode)) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 #else
     if (SDL_SetRelativeMouseMode((SDL_bool)mode)) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 #endif
     Py_RETURN_NONE;

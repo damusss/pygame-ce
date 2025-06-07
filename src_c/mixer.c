@@ -445,13 +445,13 @@ _init(int freq, int size, int channels, int chunk, char *devicename,
         }
 
         if (SDL_InitSubSystem(SDL_INIT_AUDIO)) {
-            return RAISE(pgExc_SDLError, SDL_GetError());
+            return RAISE_SDL_ERROR;
         }
 
         if (Mix_OpenAudioDevice(freq, fmt, channels, chunk, devicename,
                                 allowedchanges) == -1) {
             SDL_QuitSubSystem(SDL_INIT_AUDIO);
-            return RAISE(pgExc_SDLError, SDL_GetError());
+            return RAISE_SDL_ERROR;
         }
         Mix_ChannelFinished(endsound_callback);
         Mix_VolumeMusic(127);
@@ -1531,7 +1531,7 @@ mixer_set_soundfont(PyObject *self, PyObject *args)
     }
 
     if (paths_set == 0) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     Py_RETURN_NONE;

@@ -161,12 +161,12 @@ aaline(PyObject *self, PyObject *arg, PyObject *kwargs)
 
     SDL_Rect surf_clip_rect;
     if (!PG_GetSurfaceClipRect(surf, &surf_clip_rect)) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     PG_PixelFormat *surf_format = PG_GetSurfaceFormat(surf);
     if (surf_format == NULL) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     CHECK_LOAD_COLOR(colorobj)
@@ -253,7 +253,7 @@ line(PyObject *self, PyObject *arg, PyObject *kwargs)
 
     SDL_Rect surf_clip_rect;
     if (!PG_GetSurfaceClipRect(surf, &surf_clip_rect)) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     CHECK_LOAD_COLOR(colorobj)
@@ -348,12 +348,12 @@ aalines(PyObject *self, PyObject *arg, PyObject *kwargs)
 
     SDL_Rect surf_clip_rect;
     if (!PG_GetSurfaceClipRect(surf, &surf_clip_rect)) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     PG_PixelFormat *surf_format = PG_GetSurfaceFormat(surf);
     if (surf_format == NULL) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     CHECK_LOAD_COLOR(colorobj)
@@ -553,7 +553,7 @@ lines(PyObject *self, PyObject *arg, PyObject *kwargs)
 
     SDL_Rect surf_clip_rect;
     if (!PG_GetSurfaceClipRect(surf, &surf_clip_rect)) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     CHECK_LOAD_COLOR(colorobj)
@@ -683,7 +683,7 @@ arc(PyObject *self, PyObject *arg, PyObject *kwargs)
 
     SDL_Rect surf_clip_rect;
     if (!PG_GetSurfaceClipRect(surf, &surf_clip_rect)) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     CHECK_LOAD_COLOR(colorobj)
@@ -763,7 +763,7 @@ ellipse(PyObject *self, PyObject *arg, PyObject *kwargs)
 
     SDL_Rect surf_clip_rect;
     if (!PG_GetSurfaceClipRect(surf, &surf_clip_rect)) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     CHECK_LOAD_COLOR(colorobj)
@@ -854,7 +854,7 @@ circle(PyObject *self, PyObject *args, PyObject *kwargs)
 
     SDL_Rect surf_clip_rect;
     if (!PG_GetSurfaceClipRect(surf, &surf_clip_rect)) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     CHECK_LOAD_COLOR(colorobj)
@@ -964,12 +964,12 @@ aacircle(PyObject *self, PyObject *args, PyObject *kwargs)
 
     SDL_Rect surf_clip_rect;
     if (!PG_GetSurfaceClipRect(surf, &surf_clip_rect)) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     PG_PixelFormat *surf_format = PG_GetSurfaceFormat(surf);
     if (surf_format == NULL) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     CHECK_LOAD_COLOR(colorobj)
@@ -1092,7 +1092,7 @@ polygon(PyObject *self, PyObject *arg, PyObject *kwargs)
 
     SDL_Rect surf_clip_rect;
     if (!PG_GetSurfaceClipRect(surf, &surf_clip_rect)) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     CHECK_LOAD_COLOR(colorobj)
@@ -1213,7 +1213,7 @@ rect(PyObject *self, PyObject *args, PyObject *kwargs)
 
     SDL_Rect surf_clip_rect;
     if (!PG_GetSurfaceClipRect(surf, &surf_clip_rect)) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     CHECK_LOAD_COLOR(colorobj)
@@ -1251,7 +1251,7 @@ rect(PyObject *self, PyObject *args, PyObject *kwargs)
             pgSurface_Unlock(surfobj);
             pgSurface_Unprep(surfobj);
             if (!success) {
-                return RAISE(pgExc_SDLError, SDL_GetError());
+                return RAISE_SDL_ERROR;
             }
         }
         return pgRect_New(&clipped);

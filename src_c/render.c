@@ -22,7 +22,7 @@ static PyTypeObject pgImage_Type;
 
 #define RENDERER_ERROR_CHECK(x)                       \
     if (x < 0) {                                      \
-        return RAISE(pgExc_SDLError, SDL_GetError()); \
+        return RAISE_SDL_ERROR; \
     }
 
 #define RENDERER_PROPERTY_ERROR_CHECK(x)                 \
@@ -63,7 +63,7 @@ renderer_from_window(PyTypeObject *cls, PyObject *args, PyObject *kwargs)
     }
     self->renderer = SDL_GetRenderer(self->window->_win);
     if (!self->renderer) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
     self->target = NULL;
     Py_INCREF(self);
@@ -333,12 +333,12 @@ renderer_to_surface(pgRendererObject *self, PyObject *args, PyObject *kwargs)
     else {
         format = SDL_GetWindowPixelFormat(self->window->_win);
         if (format == SDL_PIXELFORMAT_UNKNOWN) {
-            return RAISE(pgExc_SDLError, SDL_GetError());
+            return RAISE_SDL_ERROR;
         }
         surf = SDL_CreateRGBSurfaceWithFormat(
             0, rect->w, rect->h, SDL_BITSPERPIXEL(format), format);
         if (surf == NULL) {
-            return RAISE(pgExc_SDLError, SDL_GetError());
+            return RAISE_SDL_ERROR;
         }
         surface = pgSurface_New(surf);
     }

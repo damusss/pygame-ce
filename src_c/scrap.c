@@ -122,7 +122,7 @@ _scrap_init(PyObject *self, PyObject *args)
      *     return RAISE(pgExc_SDLError, "No display mode is set");
      */
     if (!pygame_scrap_init()) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     Py_RETURN_NONE;
@@ -416,7 +416,7 @@ _scrap_get_text(PyObject *self, PyObject *args)
     // vs just an empty string in the clipboard
     if (*text == '\0' && hasText == SDL_TRUE) {
         SDL_free(text);
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     PyObject *returnValue = PyUnicode_FromString(text);
@@ -442,7 +442,7 @@ _scrap_put_text(PyObject *self, PyObject *args)
     }
 
     if (SDL_SetClipboardText(text)) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     Py_RETURN_NONE;

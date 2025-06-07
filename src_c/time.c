@@ -186,7 +186,7 @@ pg_time_autoinit(PyObject *self, PyObject *_null)
     if (!pg_timer_mutex) {
         pg_timer_mutex = SDL_CreateMutex();
         if (!pg_timer_mutex) {
-            return RAISE(pgExc_SDLError, SDL_GetError());
+            return RAISE_SDL_ERROR;
         }
     }
 #endif
@@ -390,7 +390,7 @@ time_wait(PyObject *self, PyObject *arg)
 #if !SDL_VERSION_ATLEAST(3, 0, 0)
     if (!SDL_WasInit(SDL_INIT_TIMER)) {
         if (SDL_InitSubSystem(SDL_INIT_TIMER)) {
-            return RAISE(pgExc_SDLError, SDL_GetError());
+            return RAISE_SDL_ERROR;
         }
     }
 #endif
@@ -511,7 +511,7 @@ end_no_mutex:
         case PG_TIMER_NO_ERROR:
             Py_RETURN_NONE;
         case PG_TIMER_SDL_ERROR:
-            return RAISE(pgExc_SDLError, SDL_GetError());
+            return RAISE_SDL_ERROR;
         case PG_TIMER_MEMORY_ERROR:
             return PyErr_NoMemory();
         default:
@@ -550,7 +550,7 @@ clock_tick_base(pgClockObject *self, PyObject *arg, int use_accurate_delay)
         /*just doublecheck that timer is initialized*/
         if (!SDL_WasInit(SDL_INIT_TIMER)) {
             if (SDL_InitSubSystem(SDL_INIT_TIMER)) {
-                return RAISE(pgExc_SDLError, SDL_GetError());
+                return RAISE_SDL_ERROR;
             }
         }
 #endif
@@ -672,7 +672,7 @@ clock_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 #if !SDL_VERSION_ATLEAST(3, 0, 0)
     if (!SDL_WasInit(SDL_INIT_TIMER)) {
         if (SDL_InitSubSystem(SDL_INIT_TIMER)) {
-            return RAISE(pgExc_SDLError, SDL_GetError());
+            return RAISE_SDL_ERROR;
         }
     }
 #endif

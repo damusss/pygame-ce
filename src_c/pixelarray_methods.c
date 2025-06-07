@@ -132,7 +132,7 @@ _make_surface(pgPixelArrayObject *array, PyObject *args)
     if (!same_dims) {
         if (!(temp_surf = PG_CreateSurface((int)dim0, (int)dim1,
                                            PG_SURF_FORMATENUM(surf)))) {
-            return RAISE(pgExc_SDLError, SDL_GetError());
+            return RAISE_SDL_ERROR;
         }
     }
 
@@ -143,7 +143,7 @@ _make_surface(pgPixelArrayObject *array, PyObject *args)
     }
 
     if (!new_surf) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     new_surface = pgSurface_New(new_surf);
@@ -377,7 +377,7 @@ _replace_color(pgPixelArrayObject *array, PyObject *args, PyObject *kwds)
     PG_PixelFormat *format;
     SDL_Palette *palette;
     if (!PG_GetSurfaceDetails(surf, &format, &palette)) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     bpp = PG_FORMAT_BytesPerPixel(format);
@@ -582,7 +582,7 @@ _extract_color(pgPixelArrayObject *array, PyObject *args, PyObject *kwds)
     PG_PixelFormat *format;
     SDL_Palette *palette;
     if (!PG_GetSurfaceDetails(surf, &format, &palette)) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     bpp = PG_FORMAT_BytesPerPixel(format);
@@ -819,10 +819,10 @@ _compare(pgPixelArrayObject *array, PyObject *args, PyObject *kwds)
     PG_PixelFormat *format, *other_format;
     SDL_Palette *palette, *other_palette;
     if (!PG_GetSurfaceDetails(surf, &format, &palette)) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
     if (!PG_GetSurfaceDetails(other_surf, &other_format, &other_palette)) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     bpp = PG_SURF_BytesPerPixel(surf);

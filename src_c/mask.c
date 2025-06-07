@@ -913,7 +913,7 @@ mask_from_surface(PyObject *self, PyObject *args, PyObject *kwargs)
     SDL_Palette *surf_palette;
 
     if (!PG_GetSurfaceDetails(surf, &surf_format, &surf_palette)) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     maskobj = CREATE_MASK_OBJ(surf->w, surf->h, 0);
@@ -1146,13 +1146,13 @@ mask_from_threshold(PyObject *self, PyObject *args, PyObject *kwargs)
     }
 
     if (!PG_GetSurfaceDetails(surf, &surf_format, &surf_palette)) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     if (surf2) {
         surf2_format = PG_GetSurfaceFormat(surf2);
         if (!surf2_format) {
-            return RAISE(pgExc_SDLError, SDL_GetError());
+            return RAISE_SDL_ERROR;
         }
     }
 

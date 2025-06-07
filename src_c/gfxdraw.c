@@ -174,7 +174,7 @@ _gfx_pixelcolor(PyObject *self, PyObject *args)
 
     if (pixelRGBA(pgSurface_AsSurface(surface), x, y, rgba[0], rgba[1],
                   rgba[2], rgba[3]) == -1) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
     Py_RETURN_NONE;
 }
@@ -202,7 +202,7 @@ _gfx_hlinecolor(PyObject *self, PyObject *args)
 
     if (hlineRGBA(pgSurface_AsSurface(surface), x1, x2, y, rgba[0], rgba[1],
                   rgba[2], rgba[3]) == -1) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
     Py_RETURN_NONE;
 }
@@ -230,7 +230,7 @@ _gfx_vlinecolor(PyObject *self, PyObject *args)
 
     if (vlineRGBA(pgSurface_AsSurface(surface), x, _y1, y2, rgba[0], rgba[1],
                   rgba[2], rgba[3]) == -1) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
     Py_RETURN_NONE;
 }
@@ -269,7 +269,7 @@ _gfx_rectanglecolor(PyObject *self, PyObject *args)
 
     if (rectangleRGBA(pgSurface_AsSurface(surface), x1, _y1, x2, y2, rgba[0],
                       rgba[1], rgba[2], rgba[3]) == -1) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
     Py_RETURN_NONE;
 }
@@ -307,7 +307,7 @@ _gfx_boxcolor(PyObject *self, PyObject *args)
 
     if (boxRGBA(pgSurface_AsSurface(surface), x1, _y1, x2, y2, rgba[0],
                 rgba[1], rgba[2], rgba[3]) == -1) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
     Py_RETURN_NONE;
 }
@@ -335,7 +335,7 @@ _gfx_linecolor(PyObject *self, PyObject *args)
 
     if (lineRGBA(pgSurface_AsSurface(surface), x1, _y1, x2, y2, rgba[0],
                  rgba[1], rgba[2], rgba[3]) == -1) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
     Py_RETURN_NONE;
 }
@@ -363,7 +363,7 @@ _gfx_circlecolor(PyObject *self, PyObject *args)
 
     if (circleRGBA(pgSurface_AsSurface(surface), x, y, r, rgba[0], rgba[1],
                    rgba[2], rgba[3]) == -1) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
     Py_RETURN_NONE;
 }
@@ -391,7 +391,7 @@ _gfx_arccolor(PyObject *self, PyObject *args)
 
     if (arcRGBA(pgSurface_AsSurface(surface), x, y, r, start, end, rgba[0],
                 rgba[1], rgba[2], rgba[3]) == -1) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
     Py_RETURN_NONE;
 }
@@ -419,7 +419,7 @@ _gfx_aacirclecolor(PyObject *self, PyObject *args)
 
     if (aacircleRGBA(pgSurface_AsSurface(surface), x, y, r, rgba[0], rgba[1],
                      rgba[2], rgba[3]) == -1) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
     Py_RETURN_NONE;
 }
@@ -447,7 +447,7 @@ _gfx_filledcirclecolor(PyObject *self, PyObject *args)
 
     if (filledCircleRGBA(pgSurface_AsSurface(surface), x, y, r, rgba[0],
                          rgba[1], rgba[2], rgba[3]) == -1) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
     Py_RETURN_NONE;
 }
@@ -475,7 +475,7 @@ _gfx_ellipsecolor(PyObject *self, PyObject *args)
 
     if (ellipseRGBA(pgSurface_AsSurface(surface), x, y, rx, ry, rgba[0],
                     rgba[1], rgba[2], rgba[3]) == -1) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
     Py_RETURN_NONE;
 }
@@ -503,7 +503,7 @@ _gfx_aaellipsecolor(PyObject *self, PyObject *args)
 
     if (aaellipseRGBA(pgSurface_AsSurface(surface), x, y, rx, ry, rgba[0],
                       rgba[1], rgba[2], rgba[3]) == -1) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
     Py_RETURN_NONE;
 }
@@ -531,7 +531,7 @@ _gfx_filledellipsecolor(PyObject *self, PyObject *args)
 
     if (filledEllipseRGBA(pgSurface_AsSurface(surface), x, y, rx, ry, rgba[0],
                           rgba[1], rgba[2], rgba[3]) == -1) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
     Py_RETURN_NONE;
 }
@@ -559,7 +559,7 @@ _gfx_piecolor(PyObject *self, PyObject *args)
 
     if (pieRGBA(pgSurface_AsSurface(surface), x, y, r, start, end, rgba[0],
                 rgba[1], rgba[2], rgba[3]) == -1) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
     Py_RETURN_NONE;
 }
@@ -587,7 +587,7 @@ _gfx_trigoncolor(PyObject *self, PyObject *args)
 
     if (trigonRGBA(pgSurface_AsSurface(surface), x1, _y1, x2, y2, x3, y3,
                    rgba[0], rgba[1], rgba[2], rgba[3]) == -1) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
     Py_RETURN_NONE;
 }
@@ -615,7 +615,7 @@ _gfx_aatrigoncolor(PyObject *self, PyObject *args)
 
     if (aatrigonRGBA(pgSurface_AsSurface(surface), x1, _y1, x2, y2, x3, y3,
                      rgba[0], rgba[1], rgba[2], rgba[3]) == -1) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
     Py_RETURN_NONE;
 }
@@ -643,7 +643,7 @@ _gfx_filledtrigoncolor(PyObject *self, PyObject *args)
 
     if (filledTrigonRGBA(pgSurface_AsSurface(surface), x1, _y1, x2, y2, x3, y3,
                          rgba[0], rgba[1], rgba[2], rgba[3]) == -1) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
     Py_RETURN_NONE;
 }
@@ -719,7 +719,7 @@ _gfx_polygoncolor(PyObject *self, PyObject *args)
     PyMem_Free(vy);
 
     if (ret == -1) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
     Py_RETURN_NONE;
 }
@@ -795,7 +795,7 @@ _gfx_aapolygoncolor(PyObject *self, PyObject *args)
     PyMem_Free(vy);
 
     if (ret == -1) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
     Py_RETURN_NONE;
 }
@@ -872,7 +872,7 @@ _gfx_filledpolygoncolor(PyObject *self, PyObject *args)
     PyMem_Free(vy);
 
     if (ret == -1) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
     Py_RETURN_NONE;
 }
@@ -956,7 +956,7 @@ _gfx_texturedpolygon(PyObject *self, PyObject *args)
     PyMem_Free(vy);
 
     if (ret == -1) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
     Py_RETURN_NONE;
 }
@@ -1038,7 +1038,7 @@ _gfx_beziercolor(PyObject *self, PyObject *args)
     PyMem_Free(vy);
 
     if (ret == -1) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
     Py_RETURN_NONE;
 }

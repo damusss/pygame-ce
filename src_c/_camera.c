@@ -132,7 +132,7 @@ surf_colorspace(PyObject *self, PyObject *arg)
 
     PG_PixelFormat *src_fmt = PG_GetSurfaceFormat(surf);
     if (!src_fmt) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     SDL_LockSurface(newsurf);

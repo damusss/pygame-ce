@@ -568,6 +568,11 @@ typedef enum {
 #define RAISERETURN(x, y, r)   \
     PyErr_SetString((x), (y)); \
     return r;
+#define RAISE_SDL_ERROR (PyErr_SetString(pgExc_SDLError, SDL_GetError()), NULL)
+#define RAISERETURN_SDL_ERROR(r)                     \
+    PyErr_SetString(pgExc_SDLError, SDL_GetError()); \
+    return r;
+
 #define DEL_ATTR_NOT_SUPPORTED_CHECK(name, value)                            \
     do {                                                                     \
         if (!value) {                                                        \

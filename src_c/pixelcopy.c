@@ -523,7 +523,7 @@ array_to_surface(PyObject *self, PyObject *arg)
     PG_PixelFormat *format;
     SDL_Palette *palette;
     if (!PG_GetSurfaceDetails(surf, &format, &palette)) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     Rshift = format->Rshift;
@@ -987,7 +987,7 @@ map_array(PyObject *self, PyObject *args)
     SDL_Palette *palette;
     if (!PG_GetSurfaceDetails(pgSurface_AsSurface(format_surf), &format,
                               &palette)) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     pix_bytesize = PG_FORMAT_BytesPerPixel(format);
@@ -1195,7 +1195,7 @@ make_surface(PyObject *self, PyObject *arg)
     surf = PG_CreateSurface(sizex, sizey, pixelformat);
     if (!surf) {
         pgBuffer_Release(&pg_view);
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 #if SDL_VERSION_ATLEAST(3, 0, 0)
     SDL_Palette *palette = SDL_GetSurfacePalette(surf);

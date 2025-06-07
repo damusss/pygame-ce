@@ -40,7 +40,7 @@ init(PyObject *self, PyObject *_null)
 {
     if (!SDL_WasInit(SDL_INIT_JOYSTICK)) {
         if (SDL_InitSubSystem(SDL_INIT_JOYSTICK)) {
-            return RAISE(pgExc_SDLError, SDL_GetError());
+            return RAISE_SDL_ERROR;
         }
         PG_SetJoystickEventsEnabled(SDL_TRUE);
     }
@@ -117,7 +117,7 @@ get_count(PyObject *self, PyObject *_null)
     int ret;
     SDL_JoystickID *joysticks = SDL_GetJoysticks(&ret);
     if (!joysticks) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
     SDL_free(joysticks);
     return PyLong_FromLong(ret);
@@ -143,7 +143,7 @@ joy_init(PyObject *self, PyObject *_null)
     if (!jstick->joy) {
         jstick->joy = SDL_JoystickOpen(jstick->id);
         if (!jstick->joy) {
-            return RAISE(pgExc_SDLError, SDL_GetError());
+            return RAISE_SDL_ERROR;
         }
     }
 
@@ -603,7 +603,7 @@ pgJoystick_New(int id)
 #endif
     joy = SDL_JoystickOpen(id);
     if (!joy) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     /* Search existing joystick objects to see if we already have this stick.

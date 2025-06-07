@@ -106,7 +106,7 @@ music_play(PyObject *self, PyObject *args, PyObject *keywds)
     Mix_VolumeMusic(volume);
     Py_END_ALLOW_THREADS;
     if (val == -1) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     Py_RETURN_NONE;
@@ -246,7 +246,7 @@ music_set_pos(PyObject *self, PyObject *arg)
     Py_END_ALLOW_THREADS;
 
     if (position_set == -1) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     Py_RETURN_NONE;
@@ -409,7 +409,7 @@ _load_music(PyObject *obj, char *namehint)
     }
 
     if (!new_music) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     return new_music;

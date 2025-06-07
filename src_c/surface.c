@@ -368,7 +368,7 @@ surf_subtype_new(PyTypeObject *type, SDL_Surface *s, int owner)
     pgSurfaceObject *self;
 
     if (!s) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     self = (pgSurfaceObject *)pgSurface_Type.tp_new(type, NULL, NULL);
@@ -902,7 +902,7 @@ surf_get_at(PyObject *self, PyObject *position)
     PG_PixelFormat *format;
     SDL_Palette *palette;
     if (!PG_GetSurfaceDetails(surf, &format, &palette)) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
     int bpp = PG_FORMAT_BytesPerPixel(format);
 
@@ -975,7 +975,7 @@ surf_set_at(PyObject *self, PyObject *const *args, Py_ssize_t nargs)
 
     PG_PixelFormat *format = PG_GetSurfaceFormat(surf);
     if (format == NULL) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
     int bpp = PG_FORMAT_BytesPerPixel(format);
 
@@ -985,7 +985,7 @@ surf_set_at(PyObject *self, PyObject *const *args, Py_ssize_t nargs)
 
     SDL_Rect clip_rect;
     if (!PG_GetSurfaceClipRect(surf, &clip_rect)) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     if (x < clip_rect.x || x >= clip_rect.x + clip_rect.w || y < clip_rect.y ||
@@ -1116,7 +1116,7 @@ surf_map_rgb(PyObject *self, PyObject *args)
     PG_PixelFormat *format;
     SDL_Palette *palette;
     if (!PG_GetSurfaceDetails(surf, &format, &palette)) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     color = PG_MapRGBA(format, palette, rgba[0], rgba[1], rgba[2], rgba[3]);
@@ -1140,7 +1140,7 @@ surf_unmap_rgb(PyObject *self, PyObject *arg)
     PG_PixelFormat *format;
     SDL_Palette *palette;
     if (!PG_GetSurfaceDetails(surf, &format, &palette)) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     if (SDL_ISPIXELFORMAT_ALPHA(format->format)) {
@@ -1361,7 +1361,7 @@ surf_set_palette(PyObject *self, PyObject *seq)
     }
 
     if (!PG_SetPaletteColors(pal, colors, 0, len)) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
     Py_RETURN_NONE;
 }
@@ -1405,7 +1405,7 @@ surf_set_palette_at(PyObject *self, PyObject *args)
     color.a = pal->colors[_index].a; /* May be a colorkey color. */
 
     if (!PG_SetPaletteColors(pal, &color, _index, 1)) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     Py_RETURN_NONE;
@@ -1452,7 +1452,7 @@ surf_set_colorkey(pgSurfaceObject *self, PyObject *args)
     pgSurface_Unprep(self);
 
     if (result == -1) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     Py_RETURN_NONE;
@@ -1476,7 +1476,7 @@ surf_get_colorkey(pgSurfaceObject *self, PyObject *_null)
     PG_PixelFormat *format;
     SDL_Palette *palette;
     if (!PG_GetSurfaceDetails(surf, &format, &palette)) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     if (SDL_ISPIXELFORMAT_ALPHA(format->format)) {
@@ -1518,12 +1518,12 @@ surf_set_alpha(pgSurfaceObject *self, PyObject *args)
         }
 
         if (!PG_SetSurfaceBlendMode(surf, SDL_BLENDMODE_BLEND)) {
-            return RAISE(pgExc_SDLError, SDL_GetError());
+            return RAISE_SDL_ERROR;
         }
     }
     else {
         if (!PG_SetSurfaceBlendMode(surf, SDL_BLENDMODE_NONE)) {
-            return RAISE(pgExc_SDLError, SDL_GetError());
+            return RAISE_SDL_ERROR;
         }
     }
 
@@ -1540,7 +1540,7 @@ surf_set_alpha(pgSurfaceObject *self, PyObject *args)
     if (alpha == 255 && (PG_SURF_BytesPerPixel(surf) == 1)) {
         /* Can't blend with a surface alpha of 255 and 8bit surfaces */
         if (!PG_SetSurfaceBlendMode(surf, SDL_BLENDMODE_NONE)) {
-            return RAISE(pgExc_SDLError, SDL_GetError());
+            return RAISE_SDL_ERROR;
         }
     }
     pgSurface_Prep(self);
@@ -1567,7 +1567,7 @@ surf_set_alpha(pgSurfaceObject *self, PyObject *args)
     pgSurface_Unprep(self);
 
     if (result != 0) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     Py_RETURN_NONE;
@@ -1583,7 +1583,7 @@ surf_get_alpha(pgSurfaceObject *self, PyObject *_null)
     SURF_INIT_CHECK(surf)
 
     if (!PG_GetSurfaceBlendMode(surf, &mode)) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     if (mode != SDL_BLENDMODE_BLEND) {
@@ -1591,7 +1591,7 @@ surf_get_alpha(pgSurfaceObject *self, PyObject *_null)
     }
 
     if (!PG_GetSurfaceAlphaMod(surf, &alpha)) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     return PyLong_FromLong(alpha);
@@ -1606,7 +1606,7 @@ surf_get_blendmode(PyObject *self, PyObject *_null)
     SURF_INIT_CHECK(surf)
 
     if (!PG_GetSurfaceBlendMode(surf, &mode)) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
     return PyLong_FromLong((long)mode);
 }
@@ -1664,7 +1664,7 @@ surf_convert(pgSurfaceObject *self, PyObject *args)
         PG_PixelFormat *surf_format;
         SDL_Palette *surf_palette;
         if (!PG_GetSurfaceDetails(surf, &surf_format, &surf_palette)) {
-            return RAISE(pgExc_SDLError, SDL_GetError());
+            return RAISE_SDL_ERROR;
         }
 
         SDL_GetColorKey(surf, &colorkey);
@@ -1809,7 +1809,7 @@ surf_convert(pgSurfaceObject *self, PyObject *args)
     }
 
     if (newsurf == NULL) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     if (has_colorkey) {
@@ -1972,7 +1972,7 @@ surf_convert(pgSurfaceObject *self, PyObject *args)
     }
 
     if (newsurf == NULL) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     if (has_colorkey) {
@@ -2119,7 +2119,7 @@ surf_set_clip(PyObject *self, PyObject *args)
     }
 
     if (result == -1) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     Py_RETURN_NONE;
@@ -2134,7 +2134,7 @@ surf_get_clip(PyObject *self, PyObject *_null)
 
     SDL_Rect clip_rect;
     if (!PG_GetSurfaceClipRect(surf, &clip_rect)) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     return pgRect_New(&clip_rect);
@@ -2203,7 +2203,7 @@ surf_fill(pgSurfaceObject *self, PyObject *args, PyObject *keywds)
         pgSurface_Unprep(self);
     }
     if (result == -1) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     return pgRect_New(&sdlrect);
@@ -2918,7 +2918,7 @@ surf_scroll(PyObject *self, PyObject *args, PyObject *keywds)
 
     SDL_Rect clip_rect;
     if (!PG_GetSurfaceClipRect(surf, &clip_rect)) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     SDL_Rect surf_rect = {0, 0, surf->w, surf->h};
@@ -3125,7 +3125,7 @@ surf_get_masks(PyObject *self, PyObject *_null)
 
     PG_PixelFormat *format = PG_GetSurfaceFormat(surf);
     if (format == NULL) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     return Py_BuildValue("(IIII)", format->Rmask, format->Gmask, format->Bmask,
@@ -3147,7 +3147,7 @@ surf_get_shifts(PyObject *self, PyObject *_null)
 
     PG_PixelFormat *format = PG_GetSurfaceFormat(surf);
     if (format == NULL) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     return Py_BuildValue("(iiii)", format->Rshift, format->Gshift,
@@ -3169,7 +3169,7 @@ surf_get_losses(PyObject *self, PyObject *_null)
 
     PG_PixelFormat *format = PG_GetSurfaceFormat(surf);
     if (format == NULL) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     return Py_BuildValue("(iiii)", PG_FORMAT_R_LOSS(format),
@@ -3193,7 +3193,7 @@ surf_subsurface(PyObject *self, PyObject *args)
     PG_PixelFormat *format;
     SDL_Palette *palette;
     if (!PG_GetSurfaceDetails(surf, &format, &palette)) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     if (!(rect = pgRect_FromObject(args, &temp))) {
@@ -3217,7 +3217,7 @@ surf_subsurface(PyObject *self, PyObject *args)
     pgSurface_Unlock((pgSurfaceObject *)self);
 
     if (!sub) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     /* copy the colormap if we need it */
@@ -3415,7 +3415,7 @@ surf_get_bounding_rect(PyObject *self, PyObject *args, PyObject *kwargs)
     PG_PixelFormat *format;
     SDL_Palette *palette;
     if (!PG_GetSurfaceDetails(surf, &format, &palette)) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
     int bpp = PG_FORMAT_BytesPerPixel(format);
 
@@ -3635,7 +3635,7 @@ surf_get_view(PyObject *self, PyObject *args)
     PG_PixelFormat *format;
     SDL_Palette *palette;
     if (!PG_GetSurfaceDetails(surface, &format, &palette)) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
     int bpp = PG_FORMAT_BytesPerPixel(format);
 
@@ -3769,7 +3769,7 @@ surf_premul_alpha(pgSurfaceObject *self, PyObject *_null)
                          "alpha channel");
         }
         else if (result == -2) {
-            return RAISE(pgExc_SDLError, SDL_GetError());
+            return RAISE_SDL_ERROR;
         }
     }
     pgSurface_Unprep(self);
@@ -3801,7 +3801,7 @@ surf_premul_alpha_ip(pgSurfaceObject *self, PyObject *_null)
                      "alpha channel");
     }
     else if (result == -2) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     pgSurface_Unprep(self);

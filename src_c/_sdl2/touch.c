@@ -41,7 +41,7 @@ pg_touch_get_device(PyObject *self, PyObject *index)
     touchid = SDL_GetTouchDevice(PyLong_AsLong(index));
     if (touchid == 0) {
         /* invalid index */
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
     return PyLong_FromLongLong(touchid);
 }
@@ -60,7 +60,7 @@ pg_touch_num_fingers(PyObject *self, PyObject *device_id)
 
     fingercount = SDL_GetNumTouchFingers(PyLong_AsLongLong(device_id));
     if (fingercount == 0) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
     return PyLong_FromLong(fingercount);
 }

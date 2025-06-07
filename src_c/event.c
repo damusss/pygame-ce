@@ -706,7 +706,7 @@ pg_event_filter(void *_, SDL_Event *event)
         }
         /* this doesn't work! This is called by SDL, not Python:
           if (SDL_PushEvent(&newdownevent) < 0)
-            return RAISE(pgExc_SDLError, SDL_GetError()), 0;
+            return RAISE_SDL_ERROR, 0;
         */
     }
     return PG_EventEnabled(_pg_pgevent_proxify(event->type));
@@ -769,7 +769,7 @@ pgEvent_AutoInit(PyObject *self, PyObject *_null)
             /* Create mutex only if it has not been created already */
             pg_evfilter_mutex = SDL_CreateMutex();
             if (!pg_evfilter_mutex) {
-                return RAISE(pgExc_SDLError, SDL_GetError());
+                return RAISE_SDL_ERROR;
             }
         }
 #endif
@@ -2325,7 +2325,7 @@ pg_event_peek(PyObject *self, PyObject *args, PyObject *kwargs)
     if (obj == NULL || obj == Py_None) {
         res = PG_PEEP_EVENT_ALL(&event, 1, SDL_PEEKEVENT);
         if (res < 0) {
-            return RAISE(pgExc_SDLError, SDL_GetError());
+            return RAISE_SDL_ERROR;
         }
         return PyBool_FromLong(res);
     }
@@ -2346,7 +2346,7 @@ pg_event_peek(PyObject *self, PyObject *args, PyObject *kwargs)
                 Py_DECREF(seq);
 
                 if (res < 0) {
-                    return RAISE(pgExc_SDLError, SDL_GetError());
+                    return RAISE_SDL_ERROR;
                 }
                 Py_RETURN_TRUE;
             }
@@ -2356,7 +2356,7 @@ pg_event_peek(PyObject *self, PyObject *args, PyObject *kwargs)
                 Py_DECREF(seq);
 
                 if (res < 0) {
-                    return RAISE(pgExc_SDLError, SDL_GetError());
+                    return RAISE_SDL_ERROR;
                 }
                 Py_RETURN_TRUE;
             }
@@ -2386,7 +2386,7 @@ pg_event_post(PyObject *self, PyObject *obj)
         case 1:
             Py_RETURN_TRUE;
         default:
-            return RAISE(pgExc_SDLError, SDL_GetError());
+            return RAISE_SDL_ERROR;
     }
 }
 

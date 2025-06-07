@@ -27,7 +27,7 @@ controller_module_init(PyObject *module, PyObject *_null)
 {
     if (!SDL_WasInit(SDL_INIT_GAMECONTROLLER)) {
         if (SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER)) {
-            return RAISE(pgExc_SDLError, SDL_GetError());
+            return RAISE_SDL_ERROR;
         }
     }
     SDL_GameControllerEventState(SDL_ENABLE);
@@ -89,7 +89,7 @@ controller_module_get_count(PyObject *module, PyObject *_null)
 
     int count = SDL_NumJoysticks();
     if (count < 0) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     return PyLong_FromLong(count);
@@ -235,7 +235,7 @@ controller_get_mapping(pgControllerObject *self, PyObject *_null)
 
     mapping = SDL_GameControllerMapping(self->controller);
     if (!mapping) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     dict = PyDict_New();
@@ -343,7 +343,7 @@ controller_set_mapping(pgControllerObject *self, PyObject *args,
     free(mapping_string);
 
     if (res < 0) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     return PyLong_FromLong(res);
@@ -443,7 +443,7 @@ controller_new(PyTypeObject *subtype, PyObject *args, PyObject *kwargs)
 
     SDL_GameController *controller = SDL_GameControllerOpen(id);
     if (!controller) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+        return RAISE_SDL_ERROR;
     }
 
     cur = _first_controller;
