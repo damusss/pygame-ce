@@ -1017,27 +1017,28 @@ static int
 texture_set_alpha(pgTextureObject *self, PyObject *arg, void *closure)
 {
     PyObject *intobj = NULL;
-    Uint8 alpha;
-    if (PyNumber_Check(arg) && (intobj = PyNumber_Long(arg))) {
-        unsigned long longval = PyLong_AsUnsignedLong(intobj);
-        Py_DECREF(intobj);
-        if (longval == (unsigned long)-1 && PyErr_Occurred()) {
-            RAISERETURN(
-                PyExc_ValueError,
-                "Invalid alpha for texture (either negative or too large)",
-                -1);
-        }
-        if (longval > 255) {
-            alpha = 255;
-        }
-        else {
-            alpha = (Uint8)longval;
-        }
-        RENDERER_PROPERTY_ERROR_CHECK(
-            SDL_SetTextureAlphaMod(self->texture, alpha))
-        return 0;
+    if (!PyNumber_Check(arg)) {
+        RAISERETURN(PyExc_TypeError, "Texture alpha must be a valid number",
+                    -1);
     }
-    RAISERETURN(PyExc_TypeError, "Texture alpha must be a valid number", -1);
+    intobj = PyNumber_Long(arg);
+    if (!intobj) {
+        return -1; /* exception set */
+    }
+    Uint8 alpha;
+    unsigned long longval = PyLong_AsUnsignedLong(intobj);
+    Py_DECREF(intobj);
+    if (longval == (unsigned long)-1 && PyErr_Occurred()) {
+        return -1; /* exception set */
+    }
+    if (longval > 255) {
+        alpha = 255;
+    }
+    else {
+        alpha = (Uint8)longval;
+    }
+    RENDERER_PROPERTY_ERROR_CHECK(SDL_SetTextureAlphaMod(self->texture, alpha))
+    return 0;
 }
 
 static PyObject *
