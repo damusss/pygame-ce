@@ -273,7 +273,7 @@ class TextureTest(unittest.TestCase):
         self.assertEqual(255, self.texture.alpha)
         with self.assertRaises(TypeError):
             self.texture.alpha = "128"
-        with self.assertRaises(ValueError):
+        with self.assertRaises(OverflowError):
             self.texture.alpha = -64
 
     def test_blend_mode(self):
