@@ -53,22 +53,21 @@ class Surface:
     the most suitable format is chosen for the current platform.
 
     Different ways to control the pixel format are available:
-       * Providing a bitmask of flags. The flag ``SRCALPHA`` will incide a per-pixel
-         alpha channel (transparency).
+       * Providing a bitmask of flags. For example, The flag ``SRCALPHA`` gives a
+         per-pixel alpha channel (transparency).
        * Providing another ``Surface`` after the flags argument. That Surface's
          format will be used and other arguments will be ignored.
        * Advanced users can provide a bit depth and masks to precisely control how a
-         pixel's channels are organized in memory. If no masks are provided they will
-         be selected optimally from the bit depth. Normal usage of Surfaces is to leave
-         bit depth and masks as default.
-    Use :meth:`convert` and :meth:`convert_alpha` to convert the Surface to a different
-    format.
+         pixel's channels are organized in memory. If no masks are provided, the channels
+         will be selected optimally from the bit depth.
+    Use :meth:`convert` or :meth:`convert_alpha` to convert an existing Surface to a
+    different format, especially Surfaces loaded by :mod:`pygame.image` functions.
 
-    An indexed format stores an index up to 255 instead of a color for each pixel,
-    therefore requires an associated palette. While pygame provides a default palette,
-    it can be controlled with the appropriate get/set palette methods.
+    An indexed format uses a Surface color palette, a sequence of colors indexed from
+    0 to 255. Each pixel stores an index instead of a color. While pygame provides a
+    default palette, it can be controlled with the appropriate get/set palette methods.
 
-    Surfaces additionally have alpha (0-255), colorkey and rectangle clipping. These
+    Surfaces additionally have global alpha, colorkey and rectangle clipping. These
     characteristics mainly affect how the Surface is blitted to other Surfaces. The
     blit routines will use highly optimized software blitting methods.
     The clipping area is a rect defining the only area of the Surface that can be
@@ -77,28 +76,28 @@ class Surface:
 
     There are four types of transparency supported for a pygame Surface:
        * Per-pixel alpha. Provided by a format with an alpha channel where
-         every pixel has its own alpha value.
+         every pixel has its own alpha value (0-255).
        * Pre-multiplied alpha: An advanced usage of per-pixel alpha. See
          :meth:`Surface.premul_alpha` for more.
-       * Global alpha: A single alpha value that applies to the whole Surface.
+       * Global alpha: A single alpha value (0-255) that applies to the whole Surface.
          Managed with :meth:`get_alpha` and :meth:`set_alpha`.
        * Colorkey: A color flagged to be considered transparent in operations.
          See :meth:`get_colorkey` and :meth:`set_colorkey` for more.
 
-    Per-pixel alpha allows the greatest flexibility while being generally
-    slower than global alpha or colorkey. Pre-multiplied alpha is generally
-    faster than regular per-pixel alpha.
-    All types of transparency can be used togerher and correctly mix, except
-    pre-multipled alpha does not consider colorkey nor global alpha.
+    Per-pixel alpha allows the greatest flexibility and isn't always slower
+    than global alpha or colorkey. Pre-multiplied alpha is generally faster
+    than regular per-pixel alpha.
+    All types of transparency can be used together and correctly mix, except
+    pre-multiplied alpha does not consider colorkey nor global alpha.
 
     Surfaces can be created that reference the pixel data of other Surfaces.
     These are called subsurfaces and are created with the :meth:`subsurface()`
     method. Changing the pixels referenced by either the original Surface or
     the subsurface will have an effect on both.
 
-    You can use the :meth:`get_at()` and :meth:`set_at()` functions to access
-    pixels of Surfaces but while they are fine for simple access they will be
-    slow when doing pixel work with them.
+    You can use the :meth:`get_at()` and :meth:`set_at()` methods to access
+    pixels of Surfaces. While fine for simple access, they are very slow for
+    any heavy or frequent pixel work.
     It is advised to use a :class:`PixelArray` object to manipulate pixels efficiently.
     Alternatively you can use the :mod:`pygame.surfarray` module (which requires NumPy).
     Perform drawing operations and transformations on the pixels efficiently with the
