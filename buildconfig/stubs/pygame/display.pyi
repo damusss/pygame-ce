@@ -100,7 +100,7 @@ class DisplayMode:
     .. versionadded:: 2.5.8
     """
 
-    __hash__ = None
+    __hash__ = None  # type: ignore[assignment]
     @property
     def display(self) -> Display:
         """The Display object this mode is associated with."""
@@ -139,7 +139,7 @@ class Display:
     if SDL >= (3, 0, 0):
         def __hash__(self) -> int: ...
     else:
-        __hash__ = None
+        __hash__ = None  # type: ignore[assignment]
     @property
     def name(self) -> str:
         """The name of the Display like a monitor's model identifier."""
