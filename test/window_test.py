@@ -453,6 +453,18 @@ class WindowTypeTest(unittest.TestCase):
         window = pygame.Window()
         self.assertIsInstance(window.handle, int)
 
+    def test_window_shape(self):
+        window = pygame.Window((100, 100), transparent=True)
+        shape = pygame.Surface(window.size, pygame.SRCALPHA)
+        shape.fill("black")
+        pygame.draw.rect(shape, (0, 0, 0, 0), (0, 0, 50, 50))
+        window.set_shape(shape)
+        window.set_shape(None)
+        with self.assertRaises(pygame.error):
+            pygame.Window().set_shape(pygame.Surface((10, 10)))
+        with self.assertRaises(TypeError):
+            window.set_shape(pygame.Rect())
+
     def tearDown(self):
         self.win.destroy()
 

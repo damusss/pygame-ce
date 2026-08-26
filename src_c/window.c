@@ -1196,6 +1196,13 @@ window_init(pgWindowObject *self, PyObject *args, PyObject *kwargs)
 #endif
                     }
                 }
+#if SDL_VERSION_ATLEAST(3, 0, 0)
+                else if (!strcmp(_key_str, "transparent")) {
+                    if (_value_bool) {
+                        flags |= SDL_WINDOW_TRANSPARENT;
+                    }
+                }
+#endif
                 else {
                     PyErr_Format(PyExc_TypeError,
                                  "__init__ got an unexpected flag \'%s\'",
@@ -1354,6 +1361,39 @@ window_flash(pgWindowObject *self, PyObject *arg)
     Py_RETURN_NONE;
 }
 
+static PyObject *
+window_set_shape(pgWindowObject *self, PyObject *arg)
+{
+#if SDL_VERSION_ATLEAST(3, 0, 0)
+    SDL_Surface *shape;
+
+    if (!(SDL_GetWindowFlags(self->_win) & SDL_WINDOW_TRANSPARENT)) {
+        return RAISE(pgExc_SDLError,
+                     "Window.set_shape requires a window created with the "
+                     "transparent flag set to True");
+    }
+
+    if (Py_IsNone(arg)) {
+        shape = NULL;
+    }
+    else if (pgSurface_Check(arg)) {
+        shape = pgSurface_AsSurface(arg);
+    }
+    else {
+        return RAISE(PyExc_TypeError,
+                     "Argument to set_shape must be a Surface or None.");
+    }
+
+    if (SDL_SetWindowShape(self->_win, shape) == SDL_FALSE) {
+        return RAISE(pgExc_SDLError, SDL_GetError());
+    }
+    Py_RETURN_NONE;
+#else
+    return RAISE(pgExc_SDLError,
+                 "'pygame.Window.set_shape' requires SDL 3.0.0+");
+#endif
+}
+
 PyObject *
 window_repr(pgWindowObject *self)
 {
@@ -1420,6 +1460,7 @@ static PyMethodDef window_methods[] = {
     {"from_display_module", (PyCFunction)window_from_display_module,
      METH_CLASS | METH_NOARGS, DOC_WINDOW_FROMDISPLAYMODULE},
     {"flash", (PyCFunction)window_flash, METH_O, DOC_WINDOW_FLASH},
+    {"set_shape", (PyCFunction)window_set_shape, METH_O, DOC_WINDOW_SETSHAPE},
     {NULL, NULL, 0, NULL}};
 
 static PyGetSetDef _window_getset[] = {

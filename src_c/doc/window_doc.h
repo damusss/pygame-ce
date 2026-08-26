@@ -34,3 +34,4 @@
 #define DOC_WINDOW_SETICON "set_icon(icon, /) -> None\nSet the window icon."
 #define DOC_WINDOW_SETMODALFOR "set_modal_for(parent, /) -> None\nSet the window as a modal for a parent window."
 #define DOC_WINDOW_FLASH "flash(operation, /) -> None\nFlash a window to demand attention from the user."
+#define DOC_WINDOW_SETSHAPE "set_shape(shape, /) -> None\nSet or remove the interaction shape of a transparent window."

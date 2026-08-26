@@ -511,4 +511,31 @@ class Window:
 
         .. versionadded:: 2.5.2
         """
+
+    def set_shape(self, shape: Surface | None, /) -> None:
+        """Set or remove the interaction shape of a transparent window.
+
+        If a Surface is provided and the window was created with the
+        transparent flag set to True, the Surface is treated as a mask and
+        every pixel with an alpha channel less than 255 will become see
+        through to clicks (same effect as clicking outside of the window).
+        The shape is independent from what what is draw onto the window.
+
+        Passing a value of ``None`` will remove the custom shape and restore
+        the default system shape (fully opaque to clicks).
+
+        The provided shape is copied, meaning that if the Surface changes
+        it is necessary to call this function again to apply the changes.
+
+        .. note:: This method only works if the window was created with the
+            transparent flag set to True (meaning Window.transparent == True),
+            otherwise a :exc:`pygame.error` exception will be raised.
+
+        .. note:: Copying the Surface and especially processing it to update
+            the interaction geometry is an expensive operation and should
+            therefore be done sparingly.
+
+        .. versionadded: 3.0.0
+        """
+
     relative_mouse: bool
