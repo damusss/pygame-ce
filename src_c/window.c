@@ -293,7 +293,26 @@ _resize_event_watch(void *userdata, SDL_Event *event)
         return 0;
     }
 
-    event_window_pg->surf->surf = SDL_GetWindowSurface(event_window);
+    if ((SDL_GetWindowFlags(event_window) & SDL_WINDOW_BORDERLESS)) {
+        SDL_Surface *previous_frame = NULL;
+        if (event_window_pg->surf->surf) {
+            previous_frame = SDL_DuplicateSurface(event_window_pg->surf->surf);
+        }
+
+        event_window_pg->surf->surf = SDL_GetWindowSurface(event_window);
+
+        if (previous_frame && event_window_pg->surf->surf) {
+            SDL_BlitSurface(previous_frame, NULL, event_window_pg->surf->surf,
+                            NULL);
+            SDL_DestroySurface(previous_frame);
+        }
+
+        PG_UpdateWindowSurface(event_window);
+    }
+    else {
+        event_window_pg->surf->surf = SDL_GetWindowSurface(event_window);
+    }
+
     return 0;
 }
 
@@ -1354,6 +1373,218 @@ window_flash(pgWindowObject *self, PyObject *arg)
     Py_RETURN_NONE;
 }
 
+#if SDL_VERSION_ATLEAST(3, 0, 0)
+#define SURF_GET_AT(p_color, p_surf, p_x, p_y, p_pixels, p_format, p_pix)    \
+    switch (PG_FORMAT_BytesPerPixel(p_format)) {                             \
+        case 1:                                                              \
+            p_color = (Uint32) *                                             \
+                      ((Uint8 *)(p_pixels) + (p_y) * p_surf->pitch + (p_x)); \
+            break;                                                           \
+        case 2:                                                              \
+            p_color =                                                        \
+                (Uint32) *                                                   \
+                ((Uint16 *)((p_pixels) + (p_y) * p_surf->pitch) + (p_x));    \
+            break;                                                           \
+        case 3:                                                              \
+            p_pix =                                                          \
+                ((Uint8 *)(p_pixels + (p_y) * p_surf->pitch) + (p_x) * 3);   \
+            p_color = (SDL_BYTEORDER == SDL_LIL_ENDIAN)                      \
+                          ? (p_pix[0]) + (p_pix[1] << 8) + (p_pix[2] << 16)  \
+                          : (p_pix[2]) + (p_pix[1] << 8) + (p_pix[0] << 16); \
+            break;                                                           \
+        default: /* case 4: */                                               \
+            p_color =                                                        \
+                *((Uint32 *)(p_pixels + (p_y) * p_surf->pitch) + (p_x));     \
+            break;                                                           \
+    }
+
+static SDL_HitTestResult
+_window_hit_test_callback(SDL_Window *win, SDL_Point *area, void *data)
+{
+    Uint8 *hit_test_result_mask = (Uint8 *)data;
+    if (!hit_test_result_mask) {
+        return SDL_HITTEST_NORMAL;
+    }
+
+    int win_w, win_h;
+    if (SDL_GetWindowSizeInPixels(win, &win_w, &win_h) == SDL_FALSE) {
+        return SDL_HITTEST_NORMAL;
+    }
+
+    int mask_index = area->y * win_w + area->x;
+    if (mask_index < 0 || mask_index >= win_w * win_h) {
+        return SDL_HITTEST_NORMAL;
+    }
+
+    return (SDL_HitTestResult)(hit_test_result_mask[mask_index]);
+}
+
+static void
+_window_free_hit_test_mask_callback(void *userdata, void *value)
+{
+    if (value != NULL) {
+        PyMem_Free(value);
+    }
+}
+#endif
+
+static PyObject *
+window_set_hit_test_mask(pgWindowObject *self, PyObject *args,
+                         PyObject *kwargs)
+{
+#if SDL_VERSION_ATLEAST(3, 0, 0)
+    PyObject *surface_mask_obj = NULL;
+    SDL_Surface *surface_mask;
+    PyObject *hit_test_color_objs[9] = {NULL};
+    Uint32 hit_test_colors[9];
+    Uint8 hit_test_none_flags[9];
+
+    static char *keywords[] = {"surface_mask",
+                               "draggable_color",
+                               "resize_topleft_color",
+                               "resize_top_color",
+                               "resize_topright_color",
+                               "resize_right_color",
+                               "resize_bottomright_color",
+                               "resize_bottom_color",
+                               "resize_bottomleft_color",
+                               "resize_left_color",
+                               NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(
+            args, kwargs, "O|$OOOOOOOOO", keywords, &surface_mask_obj,
+            &hit_test_color_objs[0], &hit_test_color_objs[1],
+            &hit_test_color_objs[2], &hit_test_color_objs[3],
+            &hit_test_color_objs[4], &hit_test_color_objs[5],
+            &hit_test_color_objs[6], &hit_test_color_objs[7],
+            &hit_test_color_objs[8])) {
+        return NULL;
+    }
+
+    if (Py_IsNone(surface_mask_obj)) {
+        if (SDL_SetWindowHitTest(self->_win, NULL, NULL) == SDL_FALSE) {
+            return RAISE(pgExc_SDLError, SDL_GetError());
+        }
+
+        SDL_PropertiesID props = SDL_GetWindowProperties(self->_win);
+        if (props == 0) {
+            return RAISE(pgExc_SDLError, SDL_GetError());
+        }
+        if (SDL_HasProperty(props, "pygame.Window.hit_test_mask") ==
+            SDL_TRUE) {
+            if (SDL_ClearProperty(props, "pygame.Window.hit_test_mask") ==
+                SDL_FALSE) {
+                return RAISE(pgExc_SDLError, SDL_GetError());
+            }
+        }
+
+        Py_RETURN_NONE;
+    }
+    else if (!pgSurface_Check(surface_mask_obj)) {
+        return RAISE(PyExc_TypeError,
+                     "surface_mask must be a pygame.Surface or None");
+    }
+    surface_mask = pgSurface_AsSurface(surface_mask_obj);
+
+    int win_w, win_h;
+    if (SDL_GetWindowSizeInPixels(self->_win, &win_w, &win_h) == SDL_FALSE) {
+        return RAISE(pgExc_SDLError, SDL_GetError());
+    }
+    if (surface_mask->w != win_w || surface_mask->h != win_h) {
+        return RAISE(PyExc_ValueError,
+                     "The window size in pixels and the surface mask size "
+                     "must match exactly.");
+    }
+
+    for (int i = 0; i < 9; i++) {
+        PyObject *hit_test_color_obj = hit_test_color_objs[i];
+        if (hit_test_color_obj == NULL || Py_IsNone(hit_test_color_obj)) {
+            hit_test_colors[i] = 0;
+            hit_test_none_flags[i] = 1;
+        }
+        else {
+            if (!pg_MappedColorFromObj(hit_test_color_obj, surface_mask,
+                                       &hit_test_colors[i],
+                                       PG_COLOR_HANDLE_ALL)) {
+                return NULL;
+            }
+            hit_test_none_flags[i] = 0;
+        }
+    }
+
+    PG_PixelFormat *mask_format = PG_GetSurfaceFormat(surface_mask);
+    if (mask_format == NULL) {
+        return RAISE(pgExc_SDLError, SDL_GetError());
+    }
+
+    Uint8 *hit_test_result_mask =
+        PyMem_Malloc(surface_mask->w * surface_mask->h);
+    if (hit_test_result_mask == NULL) {
+        return PyErr_NoMemory();
+    }
+
+    SDL_LockSurface(surface_mask);
+
+    for (int y = 0; y < surface_mask->h; y++) {
+        for (int x = 0; x < surface_mask->w; x++) {
+            Uint32 pixel;
+            Uint8 *pix;
+            SURF_GET_AT(pixel, surface_mask, x, y,
+                        (Uint8 *)surface_mask->pixels, mask_format, pix);
+
+            char assigned_hit_result = 0;
+
+            for (int i = 0; i < 9; i++) {
+                if (!hit_test_none_flags[i]) {
+                    if (pixel == hit_test_colors[i]) {
+                        assigned_hit_result = 1;
+                        hit_test_result_mask[y * surface_mask->w + x] =
+                            (Uint8)(i + 1);
+                        break;
+                    }
+                }
+            }
+
+            if (!assigned_hit_result) {
+                hit_test_result_mask[y * surface_mask->w + x] =
+                    (Uint8)SDL_HITTEST_NORMAL;
+            }
+        }
+    }
+
+    SDL_UnlockSurface(surface_mask);
+
+    if (SDL_SetWindowHitTest(self->_win,
+                             (SDL_HitTest)_window_hit_test_callback,
+                             (void *)hit_test_result_mask) == SDL_FALSE) {
+        PyMem_Free(hit_test_result_mask);
+        return RAISE(pgExc_SDLError, SDL_GetError());
+    }
+
+    SDL_PropertiesID props = SDL_GetWindowProperties(self->_win);
+    if (props == 0) {
+        PyMem_Free(hit_test_result_mask);
+        return RAISE(pgExc_SDLError, SDL_GetError());
+    }
+    if (SDL_SetPointerPropertyWithCleanup(
+            props, "pygame.Window.hit_test_mask", (void *)hit_test_result_mask,
+            _window_free_hit_test_mask_callback, NULL) == SDL_FALSE) {
+        PyMem_Free(hit_test_result_mask);
+        return RAISE(pgExc_SDLError, SDL_GetError());
+    }
+
+    Py_RETURN_NONE;
+#else
+    return RAISE(pgExc_SDLError,
+                 "'pygame.Window.set_hit_test_mask' requires
+                 SDL 3.0.0+");
+#endif
+}
+
+#if SDL_VERSION_ATLEAST(3, 0, 0)
+#undef SURF_GET_AT
+#endif
+
 PyObject *
 window_repr(pgWindowObject *self)
 {
@@ -1420,6 +1651,8 @@ static PyMethodDef window_methods[] = {
     {"from_display_module", (PyCFunction)window_from_display_module,
      METH_CLASS | METH_NOARGS, DOC_WINDOW_FROMDISPLAYMODULE},
     {"flash", (PyCFunction)window_flash, METH_O, DOC_WINDOW_FLASH},
+    {"set_hit_test_mask", (PyCFunction)window_set_hit_test_mask,
+     METH_VARARGS | METH_KEYWORDS, DOC_WINDOW_SETHITTESTMASK},
     {NULL, NULL, 0, NULL}};
 
 static PyGetSetDef _window_getset[] = {
@@ -1509,6 +1742,11 @@ MODINIT_DEFINE(window)
     }
 
     import_pygame_rect();
+    if (PyErr_Occurred()) {
+        return NULL;
+    }
+
+    import_pygame_color();
     if (PyErr_Occurred()) {
         return NULL;
     }

@@ -453,6 +453,22 @@ class WindowTypeTest(unittest.TestCase):
         window = pygame.Window()
         self.assertIsInstance(window.handle, int)
 
+    def test_window_hit_test(self):
+        window = pygame.Window(size=(100, 100))
+
+        mask = pygame.Surface(window.size)
+        mask.fill("black")
+        pygame.draw.rect(mask, "red", (0, 0, window.size[0], 20))
+        pygame.draw.rect(mask, "green", (0, window.size[1] - 10, window.size[0], 10))
+
+        window.set_hit_test_mask(
+            mask, draggable_color="red", resize_bottom_color="green"
+        )
+        window.set_hit_test_mask(None)
+
+        with self.assertRaises(TypeError):
+            window.set_hit_test_mask(pygame.Mask((100, 100)))
+
     def tearDown(self):
         self.win.destroy()
 

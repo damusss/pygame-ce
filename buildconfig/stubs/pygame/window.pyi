@@ -1,7 +1,7 @@
 from pygame.locals import WINDOWPOS_UNDEFINED
 from pygame.rect import Rect
 from pygame.surface import Surface
-from pygame.typing import Point, RectLike
+from pygame.typing import ColorLike, Point, RectLike
 from typing_extensions import deprecated  # added in 3.13
 
 def get_grabbed_window() -> Window | None: ...
@@ -511,4 +511,60 @@ class Window:
 
         .. versionadded:: 2.5.2
         """
+
+    def set_hit_test_mask(
+        self,
+        surface_mask: Surface | None,
+        *,
+        draggable_color: ColorLike | None = None,
+        resize_topleft_color: ColorLike | None = None,
+        resize_top_color: ColorLike | None = None,
+        resize_topright_color: ColorLike | None = None,
+        resize_right_color: ColorLike | None = None,
+        resize_bottomright_color: ColorLike | None = None,
+        resize_bottom_color: ColorLike | None = None,
+        resize_bottomleft_color: ColorLike | None = None,
+        resize_left_color: ColorLike | None = None,
+    ) -> None:
+        """Set or remove a Surface mask to map hit test regions of the window.
+
+        Window hit testing is an operation that tells the window manager
+        if and what regions of the client area of the window should
+        trigger user gestures like dragging and resizing. This is especially
+        useful for borderless windows implementing their own decorations.
+
+        The ``surface_mask`` parameter should be any Surface that must match
+        the window pixels size exactly. The surface should be drawn with
+        different custom colors. Each custom color should then be mapped
+        to the expected action for the affected pixels using a variable
+        amount of the keyword arguments of this method.
+
+        Each pixel of the mask will be compared exactly with the mapped
+        colors, and clicking on those areas of the window will therefore
+        result in the selected user gesture.
+
+        Every color in the mask that does not correspond exactly to a
+        mapped action will be treated as a normal window click and won't
+        result in any user gestures.
+
+        Passing a ``surface_mask`` of ``None`` will disable custom hit testing,
+        which is the default behavior for new windows.
+
+        .. note:: If the size of the window changes the hit test mask won't
+            update automatically. It is therefore highly advised to call
+            this method again every time a resize is completed, it may
+            otherwise cause system instability and undefined behavior.
+
+        .. note:: The hit test mask is independent from what is actually
+            displayed on the window. Make sure the drawn decorations align
+            with the proper regions in the hit test mask.
+
+        .. note:: The hit test mask buffer is stored in memory and will
+            increase the app's memory footprint. For reference, a 1920x1080
+            (FHD) window will occupy roughly 2 MBs of RAM while a 3840x2160
+            (4K) window will occupy roughly 8 MBs of RAM.
+
+        .. versionadded:: 3.0.0
+        """
+
     relative_mouse: bool

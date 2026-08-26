@@ -34,3 +34,4 @@
 #define DOC_WINDOW_SETICON "set_icon(icon, /) -> None\nSet the window icon."
 #define DOC_WINDOW_SETMODALFOR "set_modal_for(parent, /) -> None\nSet the window as a modal for a parent window."
 #define DOC_WINDOW_FLASH "flash(operation, /) -> None\nFlash a window to demand attention from the user."
+#define DOC_WINDOW_SETHITTESTMASK "set_hit_test_mask(surface_mask, *, draggable_color=None, resize_topleft_color=None, resize_top_color=None, resize_topright_color=None, resize_right_color=None, resize_bottomright_color=None, resize_bottom_color=None, resize_bottomleft_color=None, resize_left_color=None) -> None\nSet or remove a Surface mask to map hit test regions of the window."
