@@ -539,12 +539,12 @@ class Window:
         to the expected action for the affected pixels using a variable
         amount of the keyword arguments of this method.
 
-        Each pixel of the mask will be compared exactly with the mapped
-        colors, and clicking on those areas of the window will therefore
-        result in the selected user gesture.
+        Each pixel of the surface mask will be compared exactly with the
+        mapped colors, and clicking on those areas of the window will
+        therefore result in the selected user gesture.
 
-        Every color in the mask that does not correspond exactly to a
-        mapped action will be treated as a normal window click and won't
+        Every color in the surface mask that does not correspond exactly to
+        a mapped action will be treated as a normal window click and won't
         result in any user gestures.
 
         Passing a ``surface_mask`` of ``None`` will disable custom hit testing,
